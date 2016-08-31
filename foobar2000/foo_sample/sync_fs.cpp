@@ -19,7 +19,7 @@ public:
 	}
 
 	void open(service_ptr_t<file> & p_out, const char * path, t_open_mode mode, abort_callback & p_abort) {
-
+		console::print("CALLED OUR OPEN");
 	}
 
 	bool supports_content_types() {
