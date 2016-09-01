@@ -3,6 +3,49 @@
 static const char syncfs_prefix[] = "sync://";
 static const unsigned syncfs_prefix_len = 7;
 
+class sync_file : public file_readonly {
+public:
+	int service_release() {
+		return 0; // TODO: implement
+	}
+
+	int service_add_ref() {
+		return 0; // TODO: implement
+	}
+
+	t_size read(void * p_buffer, t_size p_bytes, abort_callback & p_abort) {
+		return 0; // TODO: implement
+	}
+
+	t_filesize get_size(abort_callback & p_abort) {
+		return 0; // TODO: implement
+	}
+
+	t_filesize get_position(abort_callback & p_abort) {
+		return 0; // TODO: implement
+	}
+
+	void seek(t_filesize p_position, abort_callback & p_abort) {
+		throw exception_io_object_not_seekable(); // TODO: implement
+	}
+
+	bool can_seek() {
+		return false; // TODO: implement
+	}
+
+	bool get_content_type(pfc::string_base & p_out) {
+		return false; // TODO: implement
+	}
+
+	bool is_remote() {
+		return true; // TODO: implement
+	}
+
+	void reopen(abort_callback&) {
+		// TODO: implement
+	}
+};
+
 class sync_fs : public filesystem {
 public:
 	FB2K_MAKE_SERVICE_INTERFACE(sync_fs, filesystem);
@@ -19,7 +62,8 @@ public:
 	}
 
 	void open(service_ptr_t<file> & p_out, const char * path, t_open_mode mode, abort_callback & p_abort) {
-		console::print("CALLED OUR OPEN");
+		console::print("CALLED OUR OPEN"); // TODO: implement
+		p_out = service_ptr_t<sync_file>(new sync_file());
 	}
 
 	bool supports_content_types() {
@@ -50,7 +94,7 @@ public:
 	void get_stats(const char * p_path, t_filestats & p_stats, bool & p_is_writeable, abort_callback & p_abort) {}
 };
 
-const GUID sync_fs::class_guid = { 0xaef1a5b2, 0xf4d2, 0x4afa,{ 0xaa, 0xf6, 0xf1, 0xec, 0x6f, 0x3a, 0x71, 0xe7b } };
+const GUID sync_fs::class_guid = { 0xaef1a5b2, 0xf4d2, 0x4afa, { 0xaa, 0xf6, 0xf1, 0xec, 0x6f, 0x3a, 0x71, 0xe7b } };
 
 template<typename T>
 class fs_factory_t : public service_factory_single_t<T> {};
