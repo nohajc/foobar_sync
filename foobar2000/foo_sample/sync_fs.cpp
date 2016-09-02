@@ -118,7 +118,7 @@ public:
 };
 
 class sync_fs_impl : public sync_fs {
-	::libtorrent::session torrent_session;
+	libtorrent::session torrent_session;
 public:
 	sync_fs_impl() {
 		using namespace libtorrent;
@@ -126,7 +126,7 @@ public:
 		error_code ec;
 	}
 
-	::libtorrent::session & getTorrentSession() {
+	libtorrent::session & getTorrentSession() {
 		return torrent_session;
 	}
 
