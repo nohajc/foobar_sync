@@ -49,7 +49,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;FOO_INPUT_RAW_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>BOOST_ASIO_SEPARATE_COMPILATION;WIN32;_DEBUG;_WINDOWS;_USRDLL;FOO_INPUT_RAW_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
@@ -57,7 +57,7 @@
       <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
-      <AdditionalIncludeDirectories>$(SolutionDir)\..\..\..\WTL\Include\;$(SolutionDir)\..\..\..\poco-1.7.4\Net\include\;$(SolutionDir)\..\..\..\poco-1.7.4\Foundation\include\</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\..\..\..\boost_1_61_0;$(SolutionDir)\..\..\..\libtorrent-rasterbar-1.0.10\include;$(SolutionDir)\..\..\..\WTL\Include\;$(SolutionDir)\..\..\..\poco-1.7.4\Net\include\;$(SolutionDir)\..\..\..\poco-1.7.4\Foundation\include\</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -66,8 +66,10 @@
       <DataExecutionPrevention>
       </DataExecutionPrevention>
       <TargetMachine>MachineX86</TargetMachine>
-      <AdditionalDependencies>PocoFoundationmtd.lib;PocoNetmtd.lib;../shared/shared.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)\..\..\..\poco-1.7.4\lib\</AdditionalLibraryDirectories>
+      <AdditionalDependencies>dbghelp.lib;libtorrent.lib;PocoFoundationmtd.lib;PocoNetmtd.lib;../shared/shared.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)\..\..\..\boost_1_61_0\bin.v2\libs\date_time\build\msvc-14.0\debug\link-static\runtime-link-static\threading-multi;$(SolutionDir)\..\..\..\boost_1_61_0\bin.v2\libs\system\build\msvc-14.0\debug\link-static\runtime-link-static\threading-multi;$(SolutionDir)\..\..\..\libtorrent-rasterbar-1.0.10\bin\debug;$(SolutionDir)\..\..\..\poco-1.7.4\lib\</AdditionalLibraryDirectories>
+      <IgnoreSpecificDefaultLibraries>
+      </IgnoreSpecificDefaultLibraries>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">

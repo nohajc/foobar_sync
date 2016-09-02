@@ -3,9 +3,17 @@
 #include <Poco/Net/HTTPRequest.h>
 #include <Poco/Net/HTTPResponse.h>
 #include <Poco/URI.h>
+
+#include <boost/asio/impl/src.hpp>
+
+#include <libtorrent/entry.hpp>
+#include <libtorrent/bencode.hpp>
+#include <libtorrent/session.hpp>
+
 #include <string>
 #include <iostream>
 #include <sstream>
+
 
 static const char syncfs_prefix[] = "sync://";
 static const unsigned syncfs_prefix_len = 7;
@@ -20,11 +28,11 @@ class sync_file : public file_readonly {
 	t_filesize file_offset;
 
 	URI uri;
-	HTTPClientSession session;
+	HTTPClientSession http_session;
 	std::string path;
 
 public:
-	sync_file(const char * url) : uri(url), session(uri.getHost(), uri.getPort()), path(uri.getPathAndQuery()) {
+	sync_file(const char * url) : uri(url), http_session(uri.getHost(), uri.getPort()), path(uri.getPathAndQuery()) {
 		ref_count = 0;
 		file_offset = 0;
 
@@ -35,8 +43,8 @@ public:
 		HTTPRequest req(HTTPRequest::HTTP_HEAD, path, HTTPMessage::HTTP_1_1);
 		HTTPResponse resp;
 
-		session.sendRequest(req);
-		std::istream & resp_body = session.receiveResponse(resp);
+		http_session.sendRequest(req);
+		std::istream & resp_body = http_session.receiveResponse(resp);
 
 		if (resp.getStatus() == HTTPResponse::HTTP_NOT_FOUND) {
 			// Error 404
@@ -110,7 +118,18 @@ public:
 };
 
 class sync_fs_impl : public sync_fs {
+	::libtorrent::session torrent_session;
 public:
+	sync_fs_impl() {
+		using namespace libtorrent;
+		// Initialize torrent client
+		error_code ec;
+	}
+
+	::libtorrent::session & getTorrentSession() {
+		return torrent_session;
+	}
+
 	bool is_our_path(const char * path) {
 		if (strncmp(path, syncfs_prefix, syncfs_prefix_len) == 0) {
 			console::printf("Got sync path %s.", path);
