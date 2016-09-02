@@ -50,6 +50,13 @@ public:
 
 		console::print(mime_type);
 		console::printf("%d", file_size);
+
+		try {
+			console::print(resp.get("Accept-Ranges").c_str());
+		}
+		catch (NotFoundException) {
+			console::print("Byte ranges not supported!");
+		}
 	}
 
 	int service_release() {
@@ -73,6 +80,9 @@ public:
 	}
 
 	void seek(t_filesize p_position, abort_callback & p_abort) {
+		if (p_position > file_size) {
+			throw exception_io_seek_out_of_range();
+		}
 		file_offset = p_position;
 	}
 
@@ -114,9 +124,9 @@ public:
 
 		pfc::string8 new_path = "http://";
 		new_path += (path + syncfs_prefix_len);
-		p_out = service_ptr_t<sync_file>(new sync_file(new_path));
+		//p_out = service_ptr_t<sync_file>(new sync_file(new_path));
 
-		/*filesystem::g_open(p_out, new_path, mode, p_abort);
+		filesystem::g_open(p_out, new_path, mode, p_abort);
 
 		service_ptr_t<filesystem> fs = filesystem::g_get_interface(new_path);
 
@@ -134,7 +144,7 @@ public:
 		}
 		else {
 			console::print("DOES NOT SUPPORT MIME TYPES!");
-		}*/
+		}
 	}
 
 	bool supports_content_types() {
