@@ -5,6 +5,7 @@
 #include <libtorrent/entry.hpp>
 #include <libtorrent/bencode.hpp>
 #include <libtorrent/session.hpp>
+#include "libtorrent/time.hpp"
 
 #include <memory>
 #include <thread>
@@ -48,7 +49,7 @@ void sync_manager::alert_handler() {
 	using namespace libtorrent;
 
 	while (true) {
-		while (!torrent_session->wait_for_alert(time_duration(10000000))) {
+		while (!torrent_session->wait_for_alert(seconds(5))) {
 			console::print("Waiting for event...");
 		}
 		auto a = torrent_session->pop_alert();
