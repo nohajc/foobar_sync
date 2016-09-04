@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "resource.h"
+#include "sync_manager.h"
 
 class COpenTorrentDiag : public CDialogImpl<COpenTorrentDiag> {
 public:
@@ -15,6 +16,8 @@ public:
 		pfc::string8 path;
 		uGetDlgItemText(*this, IDC_TORRENT_PATH, path);
 		console::print(path);
+
+		sync_manager & sm = sync_manager::get_instance();
 	}
 
 	void OnCancel(UINT, int, CWindow) {

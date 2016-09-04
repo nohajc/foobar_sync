@@ -61,7 +61,12 @@ sync_file::sync_file(const char * url) /*: uri(url), http_session(uri.getHost(),
 }
 
 int sync_file::service_release() {
-	return --ref_count;
+	int ret = --ref_count;
+	if (ret == 0) {
+		delete this;
+	}
+
+	return ret;
 }
 
 int sync_file::service_add_ref() {
@@ -106,7 +111,7 @@ void sync_file::reopen(abort_callback & p_abort) {
 
 
 sync_fs_impl::sync_fs_impl() {
-	using namespace libtorrent;
+	//using namespace libtorrent;
 
 	//session & s = torrent_session;		
 	//error_code ec;
@@ -129,20 +134,21 @@ sync_fs_impl::~sync_fs_impl() {
 
 /*libtorrent::session & sync_fs_impl::get_torrent_session() {
 	return torrent_session;
-}*/
+}
 
 decltype(sync_fs_impl::pl) & sync_fs_impl::get_playlist_map() {
 	return pl;
 }
+*/
 
-void sync_fs_impl::alert_handler() {
+/*void sync_fs_impl::alert_handler() {
 	using namespace libtorrent;
 
 	while (true) {
-		/*while (!torrent_session.wait_for_alert(libtorrent::time_duration(1000)));
-		auto a = torrent_session.pop_alert();*/
+		while (!torrent_session.wait_for_alert(libtorrent::time_duration(1000)));
+		auto a = torrent_session.pop_alert();
 	}
-}
+}*/
 
 bool sync_fs_impl::is_our_path(const char * path) {
 	if (strncmp(path, syncfs_prefix, syncfs_prefix_len) == 0) {

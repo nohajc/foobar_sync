@@ -53,19 +53,13 @@ public:
 };
 
 class sync_fs_impl : public sync_fs {
-	//libtorrent::session torrent_session;
+	/*libtorrent::session torrent_session;
 	std::thread alert_handler_thread;
-	std::map<libtorrent::sha1_hash, std::unique_ptr<sync_playlist>> pl;
+	std::map<libtorrent::sha1_hash, std::unique_ptr<sync_playlist>> pl;*/
 
 public:
 	sync_fs_impl();
 	~sync_fs_impl();
-
-	//libtorrent::session & get_torrent_session();
-
-	decltype(pl) & get_playlist_map();
-
-	void alert_handler();
 
 	bool is_our_path(const char * path);
 
