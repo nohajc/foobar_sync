@@ -10,6 +10,7 @@
 #include <memory>
 #include <thread>
 #include <unordered_map>
+#include <vector>
 
 class sync_manager : public initquit {
 	std::unique_ptr<libtorrent::session> torrent_session;
@@ -26,6 +27,10 @@ public:
 	decltype(pl) & get_playlist_map();
 
 	void alert_handler();
+
+	void add_torrent_from_url(const char * url);
+	void add_torrent_from_data(const char * data, std::streamsize size);
+	void add_torrent(libtorrent::torrent_info * ti);
 
 	static sync_manager & get_instance();
 };

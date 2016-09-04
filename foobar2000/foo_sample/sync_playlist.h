@@ -6,7 +6,7 @@
 #include <libtorrent/bencode.hpp>
 #include <libtorrent/session.hpp>
 
-// Must not create static instance, we store instances in sync_fs_impl::pl map as unique_ptrs.
+// Creates playlist from torrent
 class sync_playlist {
 	libtorrent::torrent_handle hnd;
 	const libtorrent::torrent_info & info;

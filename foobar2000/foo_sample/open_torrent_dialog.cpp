@@ -17,7 +17,10 @@ public:
 		uGetDlgItemText(*this, IDC_TORRENT_PATH, path);
 		console::print(path);
 
+		DestroyWindow();
+
 		sync_manager & sm = sync_manager::get_instance();
+		sm.add_torrent_from_url(path);
 	}
 
 	void OnCancel(UINT, int, CWindow) {

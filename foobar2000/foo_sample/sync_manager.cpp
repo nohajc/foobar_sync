@@ -1,15 +1,30 @@
 #include "stdafx.h"
 
+#include "string_helpers.h"
 #include "sync_manager.h"
 
 #include <libtorrent/entry.hpp>
 #include <libtorrent/bencode.hpp>
 #include <libtorrent/session.hpp>
-#include "libtorrent/time.hpp"
+#include <libtorrent/time.hpp>
 
+#include <Poco/Net/HTTPClientSession.h>
+#include <Poco/Net/HTTPRequest.h>
+#include <Poco/Net/HTTPResponse.h>
+#include <Poco/URI.h>
+#include <Poco/StreamCopier.h>
+
+#include <boost/filesystem/operations.hpp>
+
+#include <iostream>
 #include <memory>
 #include <thread>
 #include <unordered_map>
+#include <string>
+#include <vector>
+#include <algorithm>
+#include <iterator>
+
 
 void sync_manager::on_init() {
 	console::print("Starting libtorrent session...");
@@ -50,10 +65,104 @@ void sync_manager::alert_handler() {
 
 	while (true) {
 		while (!torrent_session->wait_for_alert(seconds(5))) {
-			console::print("Waiting for event...");
+			//console::print("Waiting for event...");
 		}
 		auto a = torrent_session->pop_alert();
 	}
+}
+
+void sync_manager::add_torrent_from_url(const char * url) {
+	using namespace Poco;
+	using namespace Net;
+	//using namespace boost::filesystem;
+	console::print("Adding torrent from url...");
+
+	/*std::string tmpath = temp_directory_path().generic_string();
+	console::printf("Temp dir: %s", tmpath.c_str());*/
+
+	URI uri(url);
+	HTTPClientSession cs(uri.getHost(), uri.getPort());
+	std::string path(uri.getPathAndQuery());
+
+	if (path.empty()) {
+		path = "/";
+	}
+
+	HTTPRequest req(HTTPRequest::HTTP_GET, path, HTTPMessage::HTTP_1_1);
+	HTTPResponse resp;
+
+	cs.sendRequest(req);
+	std::istream & resp_body = cs.receiveResponse(resp);
+
+	if (resp.getStatus() == HTTPResponse::HTTP_NOT_FOUND) {
+		// Error 404
+		throw exception_io_not_found();
+	}
+	assert(resp.getStatus() == HTTPResponse::HTTP_OK);
+
+	std::string data;
+	std::streamsize copied = StreamCopier::copyToString(resp_body, data);
+
+	console::printf("Content-Length: %u", resp.getContentLength());
+	console::printf("Data length: %u", copied);
+
+	add_torrent_from_data(&data[0], copied);
+}
+
+void sync_manager::add_torrent_from_data(const char * data, std::streamsize size) {
+	using namespace libtorrent;
+
+	error_code ec;
+	torrent_info * ti = new torrent_info(&data[0], size, ec);
+
+	if (ec)
+	{
+		console::printf("Error loading torrent: %s\n", ec.message().c_str());
+		return;
+	}
+	else {
+		console::print("Torrent file appears to be valid.");
+	}
+
+	add_torrent(ti);
+}
+
+void sync_manager::add_torrent(libtorrent::torrent_info * ti) {
+	using namespace libtorrent;
+	using namespace boost::filesystem;
+
+	add_torrent_params p;
+	error_code ec;
+	session & s = *torrent_session;
+
+	p.ti = ti;
+
+	PWSTR wstr_profile_path;
+	HRESULT hr = SHGetKnownFolderPath(FOLDERID_Profile, 0, NULL, &wstr_profile_path);
+	assert(SUCCEEDED(hr));
+
+	std::string profile_path = wstringToString(wstr_profile_path);
+	CoTaskMemFree(wstr_profile_path);
+
+	path save_path = profile_path / "Foobar torrents";
+
+	if (!exists(save_path)) try {
+		create_directory(save_path);
+	}
+	catch (filesystem_error e) {
+		console::print(e.code().message().c_str());
+	}
+
+	p.save_path = save_path.generic_string();
+	console::print(save_path.generic_string().c_str());
+
+	torrent_handle h = s.add_torrent(p, ec);
+	if (ec) {
+		console::printf("Error adding torrent to session: %s", ec.message().c_str());
+		return;
+	}
+
+	pl[ti->info_hash()] = std::make_unique<sync_playlist>(h);
 }
 
 static initquit_factory_t<sync_manager> g_sync_manager;

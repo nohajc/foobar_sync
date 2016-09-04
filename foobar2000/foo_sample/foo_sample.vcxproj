@@ -67,7 +67,7 @@
       </DataExecutionPrevention>
       <TargetMachine>MachineX86</TargetMachine>
       <AdditionalDependencies>dbghelp.lib;libtorrent.lib;PocoFoundationmtd.lib;PocoNetmtd.lib;../shared/shared.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)\..\..\..\libtorrent-rasterbar-1.0.10\bin\debug;$(SolutionDir)\..\..\..\poco-1.7.4\lib\</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)\..\..\..\boost_1_61_0\bin.v2\libs\filesystem\build\msvc-14.0\debug\link-static\runtime-link-static\threading-multi\;$(SolutionDir)\..\..\..\libtorrent-rasterbar-1.0.10\bin\debug;$(SolutionDir)\..\..\..\poco-1.7.4\lib\</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
     </Link>
@@ -110,6 +110,7 @@
     <ClCompile Include="playback_state.cpp" />
     <ClCompile Include="playlist_uploader.cpp" />
     <ClCompile Include="preferences.cpp" />
+    <ClCompile Include="string_helpers.cpp" />
     <ClCompile Include="sync_manager.cpp" />
     <ClCompile Include="sync_playlist.cpp" />
     <ClCompile Include="sync_fs.cpp" />
@@ -118,6 +119,7 @@
   <ItemGroup>
     <ClInclude Include="resource.h" />
     <ClInclude Include="stdafx.h" />
+    <ClInclude Include="string_helpers.h" />
     <ClInclude Include="sync_fs.h" />
     <ClInclude Include="sync_manager.h" />
     <ClInclude Include="sync_playlist.h" />
