@@ -1,0 +1,13 @@
+foobar_sync workflow:
+	Syncer:
+		1. exports playlist via contextmenu
+		2. that creates a torrent file with the playlist files
+		3. torrent file gets uploaded to our server
+		4. user is presented with a link to the torrent
+
+	Syncee:
+		1. imports the torrent link via file menu
+		2. the torrent is downloaded
+		3. a playlist is generated from the torrent (using sync://infohash/filename paths)
+		4. sync_playlist object is created which can be looked up by the corresponding infohash
+		5. sync_playlist is used for tracking download progress and io synchronization (map of piece indices and promises)
