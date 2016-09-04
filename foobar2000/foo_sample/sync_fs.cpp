@@ -18,8 +18,8 @@
 #include <sstream>
 #include <thread>
 
-static const char syncfs_prefix[] = "sync://";
-static const unsigned syncfs_prefix_len = 7;
+//static const char syncfs_prefix[] = "sync://";
+//static const unsigned syncfs_prefix_len = 7;
 
 using namespace Poco;
 using namespace Net;
@@ -109,6 +109,8 @@ void sync_file::reopen(abort_callback & p_abort) {
 	seek(0, p_abort);
 }
 
+const char sync_fs::prefix[] = "sync://";
+const unsigned sync_fs::prefix_len = 7;
 
 sync_fs_impl::sync_fs_impl() {
 	//using namespace libtorrent;
@@ -151,7 +153,7 @@ decltype(sync_fs_impl::pl) & sync_fs_impl::get_playlist_map() {
 }*/
 
 bool sync_fs_impl::is_our_path(const char * path) {
-	if (strncmp(path, syncfs_prefix, syncfs_prefix_len) == 0) {
+	if (strncmp(path, sync_fs::prefix, sync_fs::prefix_len) == 0) {
 		console::printf("Got sync path %s.", path);
 		return true;
 	}
@@ -162,7 +164,7 @@ void sync_fs_impl::open(service_ptr_t<file> & p_out, const char * path, t_open_m
 	console::print("CALLED OUR OPEN");
 
 	pfc::string8 new_path = "http://";
-	new_path += (path + syncfs_prefix_len);
+	new_path += (path + sync_fs::prefix_len);
 	//p_out = service_ptr_t<sync_file>(new sync_file(new_path));
 
 	filesystem::g_open(p_out, new_path, mode, p_abort);

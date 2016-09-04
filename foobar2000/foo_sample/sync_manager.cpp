@@ -7,12 +7,15 @@
 #include <libtorrent/bencode.hpp>
 #include <libtorrent/session.hpp>
 #include <libtorrent/time.hpp>
+#include <libtorrent/alert.hpp>
+#include <libtorrent/alert_types.hpp>
 
 #include <Poco/Net/HTTPClientSession.h>
 #include <Poco/Net/HTTPRequest.h>
 #include <Poco/Net/HTTPResponse.h>
 #include <Poco/URI.h>
 #include <Poco/StreamCopier.h>
+#include <Poco/Net/NetException.h>
 
 #include <boost/filesystem/operations.hpp>
 
@@ -37,6 +40,8 @@ void sync_manager::on_init() {
 	session & s = *torrent_session;
 	error_code ec;
 	
+	s.set_alert_mask(alert::status_notification | alert::error_notification);
+
 	s.listen_on(std::make_pair(6881, 6889), ec);
 	if (ec) {
 		console::print(ec.message().c_str());
@@ -68,45 +73,56 @@ void sync_manager::alert_handler() {
 			//console::print("Waiting for event...");
 		}
 		auto a = torrent_session->pop_alert();
+		console::printf("Alert received: %s", a->message().c_str());
 	}
 }
 
 void sync_manager::add_torrent_from_url(const char * url) {
 	using namespace Poco;
 	using namespace Net;
-	//using namespace boost::filesystem;
+
 	console::print("Adding torrent from url...");
+	
+	try {
+		URI uri(url);
 
-	/*std::string tmpath = temp_directory_path().generic_string();
-	console::printf("Temp dir: %s", tmpath.c_str());*/
+		HTTPClientSession cs(uri.getHost(), uri.getPort());
+		std::string path(uri.getPathAndQuery());
 
-	URI uri(url);
-	HTTPClientSession cs(uri.getHost(), uri.getPort());
-	std::string path(uri.getPathAndQuery());
+		if (path.empty()) {
+			path = "/";
+		}
 
-	if (path.empty()) {
-		path = "/";
+		HTTPRequest req(HTTPRequest::HTTP_GET, path, HTTPMessage::HTTP_1_1);
+		HTTPResponse resp;
+
+		cs.sendRequest(req);
+		std::istream & resp_body = cs.receiveResponse(resp);
+
+		if (resp.getStatus() == HTTPResponse::HTTP_NOT_FOUND) {
+			// Error 404
+			//throw exception_io_not_found();
+			// TODO: proper error handling
+
+			console::print("Torrent not found.");
+			return;
+		}
+		assert(resp.getStatus() == HTTPResponse::HTTP_OK);
+
+		std::string data;
+		std::streamsize copied = StreamCopier::copyToString(resp_body, data);
+
+		console::printf("Content-Length: %u", resp.getContentLength());
+		console::printf("Data length: %u", copied);
+
+		add_torrent_from_data(&data[0], copied);
 	}
-
-	HTTPRequest req(HTTPRequest::HTTP_GET, path, HTTPMessage::HTTP_1_1);
-	HTTPResponse resp;
-
-	cs.sendRequest(req);
-	std::istream & resp_body = cs.receiveResponse(resp);
-
-	if (resp.getStatus() == HTTPResponse::HTTP_NOT_FOUND) {
-		// Error 404
-		throw exception_io_not_found();
+	catch (SyntaxException e) {
+		console::print(e.message().c_str());
 	}
-	assert(resp.getStatus() == HTTPResponse::HTTP_OK);
-
-	std::string data;
-	std::streamsize copied = StreamCopier::copyToString(resp_body, data);
-
-	console::printf("Content-Length: %u", resp.getContentLength());
-	console::printf("Data length: %u", copied);
-
-	add_torrent_from_data(&data[0], copied);
+	catch (NetException e) {
+		console::print(e.message().c_str());
+	}
 }
 
 void sync_manager::add_torrent_from_data(const char * data, std::streamsize size) {

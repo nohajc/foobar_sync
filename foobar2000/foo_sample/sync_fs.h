@@ -49,6 +49,9 @@ public:
 
 class sync_fs : public filesystem {
 public:
+	static const char prefix[];
+	static const unsigned prefix_len;
+
 	FB2K_MAKE_SERVICE_INTERFACE(sync_fs, filesystem);
 };
 
