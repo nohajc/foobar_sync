@@ -7,7 +7,10 @@
 
 #include <string>
 #include <utility>
+#include <algorithm>
 #include <boost/filesystem/operations.hpp>
+
+#include <cstring>
 
 sync_playlist::sync_playlist(const libtorrent::torrent_handle & h) : hnd(h), info(h.get_torrent_info()) {
 	using namespace libtorrent;
@@ -81,10 +84,55 @@ std::future<sync_playlist::piece_data> sync_playlist::request_piece(int piece_id
 }
 
 size_t sync_playlist::read_file(int file_idx, void * buf, t_filesize offset, t_size length, abort_callback & p_abort) {
-	console::print("TEST: Requesting first torrent piece...");
-	auto data_future = request_piece(0);
-	auto data = data_future.get();
-	console::print("TEST: First torrent piece obtained!");
+	using namespace libtorrent; // TODO: handle abort_callback
 
-	return 0;
+	console::printf("Requested read: idx = %d, off = %u", file_idx, offset);
+	console::printf("Piece size = %d", info.piece_length());
+	peer_request preq = info.map_file(file_idx, offset, length);
+
+	int first_piece_to_read = preq.piece;
+	int total_bytes_in_pieces = preq.start + preq.length;
+	int num_of_pieces_to_read = total_bytes_in_pieces / info.piece_length();
+	// Plus one if there are any leftovers
+	num_of_pieces_to_read += !!(total_bytes_in_pieces % info.piece_length());
+
+	console::printf("Which translates to: piece = %d, start = %d, length = %d", preq.piece, preq.start, preq.length);
+	console::printf("Number of pieces to read: %d", num_of_pieces_to_read);
+
+	std::vector<std::future<piece_data>> data_future;
+	// Request all the pieces
+	for (int i = first_piece_to_read; i < first_piece_to_read + num_of_pieces_to_read; ++i) {
+		data_future.push_back(request_piece(i));
+	}
+
+	// Wait for them
+	for (auto & f : data_future) {
+		f.wait();
+	}
+
+	// Copy them to the output buffer
+	char * output = (char*)buf;
+	int bytes_read_total = 0;
+	int bytes_left_to_copy = length;
+	int buf_offset = preq.start;
+
+	for (int i = 0; i < data_future.size(); ++i) {
+		auto data = data_future[i].get();
+		char * piece_buf = data.buffer.get() + buf_offset;
+		int bytes_to_read = data.size - buf_offset;
+
+		if (bytes_left_to_copy < bytes_to_read) {
+			bytes_to_read = bytes_left_to_copy;
+		}
+
+		memcpy(output, piece_buf, bytes_to_read);
+
+		output += bytes_to_read;
+		bytes_read_total += bytes_to_read;
+		bytes_left_to_copy -= bytes_to_read;
+
+		buf_offset = 0;
+	}
+
+	return bytes_read_total;
 }

@@ -84,7 +84,11 @@ int sync_file::service_add_ref() {
 }
 
 t_size sync_file::read(void * p_buffer, t_size p_bytes, abort_callback & p_abort) {
-	return pl->read_file(file_idx, p_buffer, file_offset, p_bytes, p_abort);
+	console::printf("Foobar wants to read %u bytes.", p_bytes);
+
+	t_size bytes_read = pl->read_file(file_idx, p_buffer, file_offset, p_bytes, p_abort);
+	file_offset += bytes_read;
+	return bytes_read;
 }
 
 t_filesize sync_file::get_size(abort_callback & p_abort) {
@@ -112,7 +116,7 @@ bool sync_file::get_content_type(pfc::string_base & p_out) {
 }
 
 bool sync_file::is_remote() {
-	return true;
+	return false;
 }
 
 void sync_file::reopen(abort_callback & p_abort) {

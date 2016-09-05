@@ -117,7 +117,6 @@
     <ClCompile Include="ui_element.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="future_ext.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="string_helpers.h" />
