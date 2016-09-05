@@ -8,10 +8,9 @@
 #include <libtorrent/alert.hpp>
 #include <libtorrent/alert_types.hpp>
 
-#include <vector>
-
-#include "future_ext.h"
-
+#include <unordered_map>
+#include <future>
+#include <mutex>
 
 // Creates playlist from torrent
 class sync_playlist {
@@ -37,8 +36,9 @@ public:
 
 	sync_playlist(const libtorrent::torrent_handle & h);
 
-	std::shared_future<piece_data> sync_playlist::request_piece(int piece_idx);
+	std::future<piece_data> sync_playlist::request_piece(int piece_idx);
 	size_t read_file(int file_idx, void * buf, t_filesize offset, t_size length, abort_callback & p_abort);
 
-	std::vector<shared_promise<piece_data>> read_request;
+	std::unordered_multimap<int, std::promise<piece_data>> read_request;
+	std::mutex read_request_mutex;
 };

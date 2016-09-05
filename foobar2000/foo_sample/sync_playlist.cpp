@@ -6,9 +6,10 @@
 #include "string_helpers.h"
 
 #include <string>
+#include <utility>
 #include <boost/filesystem/operations.hpp>
 
-sync_playlist::sync_playlist(const libtorrent::torrent_handle & h) : hnd(h), info(h.get_torrent_info()), read_request(info.num_pieces()) {
+sync_playlist::sync_playlist(const libtorrent::torrent_handle & h) : hnd(h), info(h.get_torrent_info()) {
 	using namespace libtorrent;
 	using namespace boost::filesystem;
 	console::print("Let's create playlist.");
@@ -58,10 +59,22 @@ decltype(sync_playlist::info) sync_playlist::get_info() {
 	return info;
 }
 
-std::shared_future<sync_playlist::piece_data> sync_playlist::request_piece(int piece_idx) {
+std::future<sync_playlist::piece_data> sync_playlist::request_piece(int piece_idx) {
 	using namespace libtorrent;
 
-	auto data_future = read_request[piece_idx].get_shared_future();
+	//auto data_future = read_request[piece_idx].get_shared_future();
+	//auto kv = std::make_pair(piece_idx, std::promise<piece_data>());
+
+	std::future<piece_data> data_future;
+	
+	{ // Synchronized access to read_request multimap
+		std::lock_guard<std::mutex> guard(read_request_mutex);
+
+		// Create promise at piece_idx
+		auto it = read_request.emplace(std::piecewise_construct, std::forward_as_tuple(piece_idx), std::forward_as_tuple());
+		data_future = it->second.get_future();
+	}
+	
 	hnd.set_piece_deadline(piece_idx, 0, torrent_handle::alert_when_available);
 
 	return data_future;

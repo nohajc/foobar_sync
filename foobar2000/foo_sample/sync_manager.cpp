@@ -40,7 +40,7 @@ void sync_manager::on_init() {
 	session & s = *torrent_session;
 	error_code ec;
 	
-	s.set_alert_mask(alert::status_notification | alert::progress_notification | alert::error_notification);
+	s.set_alert_mask(alert::status_notification | alert::error_notification);
 
 	s.listen_on(std::make_pair(6881, 6889), ec);
 	if (ec) {
@@ -76,12 +76,28 @@ void sync_manager::alert_handler() {
 		console::printf("Alert received: %s", a->message().c_str());
 
 		switch (a->type()) {
-		case read_piece_alert::alert_type:
-			auto rpa = alert_cast<read_piece_alert>(a.get());
-			sha1_hash ih = rpa->handle.get_torrent_info().info_hash();
+			case read_piece_alert::alert_type: {
+				auto rpa = alert_cast<read_piece_alert>(a.get());
+				sha1_hash ih = rpa->handle.get_torrent_info().info_hash();
+				auto & our_pl = pl[ih];
 
-			pl[ih]->read_request[rpa->piece].set_value(*rpa);
-			break;
+				std::promise<sync_playlist::piece_data> promise;
+
+				{ // Synchronized access to read_request multimap
+					std::lock_guard<std::mutex> guard(our_pl->read_request_mutex);
+
+					// Find a request for this torrent piece
+					auto it = our_pl->read_request.find(rpa->piece);
+					assert(it != our_pl->read_request.end());
+					// Remove promise from the multimap, move it to this local scope
+					promise = std::move(it->second);
+					our_pl->read_request.erase(it);
+				}
+
+				// Provide the data to an associated future object
+				promise.set_value(*rpa); // After the value is set, promise can be deleted
+				break;
+			}
 		}
 	}
 }
