@@ -2,6 +2,7 @@
 
 #include "string_helpers.h"
 #include "sync_manager.h"
+#include "sync_playlist.h"
 
 #include <libtorrent/entry.hpp>
 #include <libtorrent/bencode.hpp>
@@ -81,7 +82,7 @@ void sync_manager::alert_handler() {
 				sha1_hash ih = rpa->handle.get_torrent_info().info_hash();
 				auto & our_pl = pl[ih];
 
-				std::promise<sync_playlist::piece_data> promise;
+				sync_playlist::read_piece_task task;
 
 				{ // Synchronized access to read_request multimap
 					std::lock_guard<std::mutex> guard(our_pl->read_request_mutex);
@@ -90,12 +91,13 @@ void sync_manager::alert_handler() {
 					auto it = our_pl->read_request.find(rpa->piece);
 					assert(it != our_pl->read_request.end());
 					// Remove promise from the multimap, move it to this local scope
-					promise = std::move(it->second);
+					task = std::move(it->second);
 					our_pl->read_request.erase(it);
 				}
 
 				// Provide the data to an associated future object
-				promise.set_value(*rpa); // After the value is set, promise can be deleted
+				task(*rpa); // After the value is set, task can be deleted
+				//promise.set_value(*rpa); // After the value is set, promise can be deleted
 				break;
 			}
 		}

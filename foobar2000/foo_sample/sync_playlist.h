@@ -8,14 +8,19 @@
 #include <libtorrent/alert.hpp>
 #include <libtorrent/alert_types.hpp>
 
+#include <vector>
 #include <unordered_map>
 #include <future>
 #include <mutex>
+#include <thread>
 
 // Creates playlist from torrent
 class sync_playlist {
 	libtorrent::torrent_handle hnd;
 	const libtorrent::torrent_info & info;
+	std::thread readahead_thread;
+
+	void readahead();
 public:
 	struct piece_data {
 		boost::shared_array<char> buffer;
@@ -36,9 +41,16 @@ public:
 
 	sync_playlist(const libtorrent::torrent_handle & h);
 
-	std::future<piece_data> sync_playlist::request_piece(int piece_idx);
+	std::future<piece_data> sync_playlist::request_piece(int piece_idx, int deadline);
 	size_t read_file(int file_idx, void * buf, t_filesize offset, t_size length, abort_callback & p_abort);
 
-	std::unordered_multimap<int, std::promise<piece_data>> read_request;
+	typedef std::packaged_task<piece_data(piece_data)> read_piece_task;
+	std::unordered_multimap<int, read_piece_task> read_request;
 	std::mutex read_request_mutex;
+
+private:
+	std::vector<char> cached_data;
+	std::vector<bool> piece_cached_bitmap;
+	std::function<piece_data(piece_data)> cache_piece_callback;
+	piece_data cache_piece(const piece_data & pd);
 };

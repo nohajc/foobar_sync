@@ -52,6 +52,17 @@ sync_playlist::sync_playlist(const libtorrent::torrent_handle & h) : hnd(h), inf
 	pl_manager->set_active_playlist(pl_idx);*/
 	pl_manager->activeplaylist_clear();
 	pl_manager->activeplaylist_add_items_filter(mh_list, false);
+
+	// Prepare cache_piece callback object
+	cache_piece_callback = std::bind(&sync_playlist::cache_piece, this, std::placeholders::_1);
+
+	// Allocate memory for cache
+	cached_data.resize(info.total_size());
+	// Init cache bitmap
+	piece_cached_bitmap.resize(info.num_pieces(), false);
+
+	// Start readahead thread
+	readahead_thread = std::thread(&sync_playlist::readahead, this);
 }
 
 decltype(sync_playlist::hnd) & sync_playlist::get_handle() {
@@ -62,7 +73,7 @@ decltype(sync_playlist::info) sync_playlist::get_info() {
 	return info;
 }
 
-std::future<sync_playlist::piece_data> sync_playlist::request_piece(int piece_idx) {
+std::future<sync_playlist::piece_data> sync_playlist::request_piece(int piece_idx, int deadline) {
 	using namespace libtorrent;
 
 	//auto data_future = read_request[piece_idx].get_shared_future();
@@ -74,11 +85,12 @@ std::future<sync_playlist::piece_data> sync_playlist::request_piece(int piece_id
 		std::lock_guard<std::mutex> guard(read_request_mutex);
 
 		// Create promise at piece_idx
-		auto it = read_request.emplace(std::piecewise_construct, std::forward_as_tuple(piece_idx), std::forward_as_tuple());
+		//auto it = read_request.emplace(std::piecewise_construct, std::forward_as_tuple(piece_idx), std::forward_as_tuple());
+		auto it = read_request.emplace(std::make_pair(piece_idx, cache_piece_callback));
 		data_future = it->second.get_future();
 	}
 	
-	hnd.set_piece_deadline(piece_idx, 0, torrent_handle::alert_when_available);
+	hnd.set_piece_deadline(piece_idx, deadline, torrent_handle::alert_when_available);
 
 	return data_future;
 }
@@ -102,12 +114,19 @@ size_t sync_playlist::read_file(int file_idx, void * buf, t_filesize offset, t_s
 	std::vector<std::future<piece_data>> data_future;
 	// Request all the pieces
 	for (int i = first_piece_to_read; i < first_piece_to_read + num_of_pieces_to_read; ++i) {
-		data_future.push_back(request_piece(i));
+		if (!piece_cached_bitmap[i]) {
+			data_future.push_back(request_piece(i, 0));
+		}
+		else { // Cached piece
+			data_future.emplace_back(); // Insert empty future (valid() == false)
+		}
 	}
 
 	// Wait for them
 	for (auto & f : data_future) {
-		f.wait();
+		if (f.valid()) {
+			f.wait();
+		}
 	}
 
 	// Copy them to the output buffer
@@ -115,11 +134,24 @@ size_t sync_playlist::read_file(int file_idx, void * buf, t_filesize offset, t_s
 	int bytes_read_total = 0;
 	int bytes_left_to_copy = length;
 	int buf_offset = preq.start;
+	int read_offset = first_piece_to_read * info.piece_length() + buf_offset;
 
 	for (int i = 0; i < data_future.size(); ++i) {
-		auto data = data_future[i].get();
-		char * piece_buf = data.buffer.get() + buf_offset;
-		int bytes_to_read = data.size - buf_offset;
+		auto & f = data_future[i];
+		int bytes_to_read;
+		char * piece_buf;
+
+		if (f.valid()) { // Read from the returned piece_data
+			auto data = f.get();
+			piece_buf = data.buffer.get() + buf_offset;
+			bytes_to_read = data.size - buf_offset;
+			console::print(">>> READING FROM PIECE_DATA");
+		}
+		else { // Read from cache
+			piece_buf = &cached_data[read_offset];
+			bytes_to_read = info.piece_size(first_piece_to_read + i) - buf_offset;
+			console::print(">>> READING FROM CACHE");
+		}
 
 		if (bytes_left_to_copy < bytes_to_read) {
 			bytes_to_read = bytes_left_to_copy;
@@ -127,6 +159,7 @@ size_t sync_playlist::read_file(int file_idx, void * buf, t_filesize offset, t_s
 
 		memcpy(output, piece_buf, bytes_to_read);
 
+		read_offset += bytes_to_read;
 		output += bytes_to_read;
 		bytes_read_total += bytes_to_read;
 		bytes_left_to_copy -= bytes_to_read;
@@ -135,4 +168,41 @@ size_t sync_playlist::read_file(int file_idx, void * buf, t_filesize offset, t_s
 	}
 
 	return bytes_read_total;
+}
+
+sync_playlist::piece_data sync_playlist::cache_piece(const piece_data & pd) {
+	console::print("| CACHE PIECE |");
+
+	int piece_idx = pd.piece;
+
+	if (!piece_cached_bitmap[piece_idx]) {
+		char * buf = pd.buffer.get();
+		int piece_offset = piece_idx * info.piece_length();
+
+		memcpy(&cached_data[piece_offset], buf, pd.size);
+		piece_cached_bitmap[piece_idx] = true;
+	}
+
+	return pd;
+}
+
+void sync_playlist::readahead() {
+	console::print("| READAHEAD THREAD STARTED |");
+
+	int num_pieces = info.num_pieces();
+	std::vector<std::future<piece_data>> data_future;
+
+	// Request all the pieces
+
+	for (int i = 0, deadline = 0; i < num_pieces; ++i, deadline += 500) {
+		data_future.push_back(request_piece(i, deadline));
+	}
+
+	for (auto & f : data_future) {
+		// We don't need the data here but we should also
+		// destroy the reference to them (shared_array)
+		auto data = f.get();
+	}
+
+	console::print("| READAHEAD THREAD FINISHED |");
 }
