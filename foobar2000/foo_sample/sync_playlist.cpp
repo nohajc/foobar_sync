@@ -8,6 +8,8 @@
 #include <string>
 #include <utility>
 #include <algorithm>
+#include <chrono>
+
 #include <boost/filesystem/operations.hpp>
 
 #include <cstring>
@@ -96,7 +98,7 @@ std::future<sync_playlist::piece_data> sync_playlist::request_piece(int piece_id
 }
 
 size_t sync_playlist::read_file(int file_idx, void * buf, t_filesize offset, t_size length, abort_callback & p_abort) {
-	using namespace libtorrent; // TODO: handle abort_callback
+	using namespace libtorrent;
 
 	console::printf("Requested read: idx = %d, off = %u", file_idx, offset);
 	console::printf("Piece size = %d", info.piece_length());
@@ -125,7 +127,11 @@ size_t sync_playlist::read_file(int file_idx, void * buf, t_filesize offset, t_s
 	// Wait for them
 	for (auto & f : data_future) {
 		if (f.valid()) {
-			f.wait();
+			std::future_status st;
+			do {
+				p_abort.check();
+				st = f.wait_for(std::chrono::milliseconds(100));
+			} while (st == std::future_status::timeout);
 		}
 	}
 
