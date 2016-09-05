@@ -18,9 +18,9 @@ class sync_file : public file_readonly {
 	pfc::string8 mime_type;
 	t_filesize file_size;
 	t_filesize file_offset;
+	int file_idx;
+	sync_playlist * pl; // Associated torrent playlist
 
-	/*URI uri;
-	HTTPClientSession http_session;*/
 	std::string path;
 
 public:
@@ -61,8 +61,8 @@ class sync_fs_impl : public sync_fs {
 	std::map<libtorrent::sha1_hash, std::unique_ptr<sync_playlist>> pl;*/
 
 public:
-	sync_fs_impl();
-	~sync_fs_impl();
+	//sync_fs_impl();
+	//~sync_fs_impl();
 
 	bool is_our_path(const char * path);
 

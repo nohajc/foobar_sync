@@ -22,13 +22,15 @@ sync_playlist::sync_playlist(const libtorrent::torrent_handle & h) : hnd(h), inf
 
 	for (int i = 0; i < num_files; ++i) {
 		const file_entry & e = info.file_at(i);
+		if (e.pad_file) continue;
+
 		path fp = e.path;
 
 		// Get textual representation of the infohash
 		std::string hash_binstr = info.info_hash().to_string();
 		std::string hash_str = sha1ToHexString(hash_binstr);
 
-		fp = hash_str / fp;
+		fp = hash_str / std::to_string(i) / fp;
 
 		// Create full path with "sync://" prefix
 		std::string path_with_prefix = sync_fs::prefix + fp.generic_string();
@@ -46,4 +48,16 @@ sync_playlist::sync_playlist(const libtorrent::torrent_handle & h) : hnd(h), inf
 	pl_manager->set_active_playlist(pl_idx);*/
 	pl_manager->activeplaylist_clear();
 	pl_manager->activeplaylist_add_items_filter(mh_list, false);
+}
+
+decltype(sync_playlist::hnd) & sync_playlist::get_handle() {
+	return hnd;
+}
+
+decltype(sync_playlist::info) sync_playlist::get_info() {
+	return info;
+}
+
+size_t sync_playlist::read_file(int file_idx, void * buf, t_filesize offset, t_size length, abort_callback & p_abort) {
+	return 0;
 }

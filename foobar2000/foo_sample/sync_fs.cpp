@@ -1,6 +1,8 @@
 #include "stdafx.h"
 
 #include "sync_fs.h"
+#include "string_helpers.h"
+#include "sync_manager.h"
 
 #include <Poco/Net/HTTPClientSession.h>
 #include <Poco/Net/HTTPRequest.h>
@@ -25,39 +27,47 @@ using namespace Poco;
 using namespace Net;
 
 
-sync_file::sync_file(const char * url) /*: uri(url), http_session(uri.getHost(), uri.getPort()), path(uri.getPathAndQuery())*/ {
+sync_file::sync_file(const char * url) {
 	ref_count = 0;
 	file_offset = 0;
+	
+	// mime_type;
+	
+	auto path_tokens = split(url + sync_fs::prefix_len, '/');
 
-	if (path.empty()) {
-		path = "/";
-	}
-
-	/*HTTPRequest req(HTTPRequest::HTTP_HEAD, path, HTTPMessage::HTTP_1_1);
-	HTTPResponse resp;
-
-	http_session.sendRequest(req);
-	std::istream & resp_body = http_session.receiveResponse(resp);
-
-	if (resp.getStatus() == HTTPResponse::HTTP_NOT_FOUND) {
-		// Error 404
-		throw exception_io_not_found();
-	}
-	assert(resp.getStatus() == HTTPResponse::HTTP_OK);
-
-	mime_type = resp.get("Content-Type").c_str();
-	std::stringstream ss(resp.get("Content-Length"));
-	ss >> file_size;
-
-	console::print(mime_type);
-	console::printf("%d", file_size);
-
-	try {
-		console::print(resp.get("Accept-Ranges").c_str());
-	}
-	catch (NotFoundException) {
-		console::print("Byte ranges not supported!");
+	console::printf("Opening file %s...", path_tokens.back().c_str());
+	/*for (std::string & t : path_tokens) {
+		console::print(t.c_str());
 	}*/
+
+	// Find torrent playlist by infohash
+	auto & pl_map = sync_manager::get_instance().get_playlist_map();
+	libtorrent::sha1_hash infohash(hexStringToSha1(path_tokens[0]));
+
+	auto it = pl_map.find(infohash);
+	if (it == pl_map.end()) {
+		console::print("HASH NOT FOUND!");
+		return; // TODO: throw exception
+	}
+
+	pl = it->second.get();
+
+	// Set file index (index of file in the torrent)
+	std::stringstream ss;
+	ss << path_tokens[1];
+	ss >> file_idx;
+	console::printf("File index: %u", file_idx);
+
+	// Set file size
+	auto & ti = pl->get_info();
+	file_size = ti.file_at(file_idx).size;
+	console::printf("File size: %u", file_size);
+
+	std::string ext = split(path_tokens.back(), '.').back();
+	console::printf("File extension: %s", ext.c_str());
+
+	mime_type = MimeTypeFromString(ext).c_str();
+	console::printf("Mime type: %s", mime_type.c_str());
 }
 
 int sync_file::service_release() {
@@ -74,7 +84,7 @@ int sync_file::service_add_ref() {
 }
 
 t_size sync_file::read(void * p_buffer, t_size p_bytes, abort_callback & p_abort) {
-	return 0; // TODO: implement
+	return pl->read_file(file_idx, p_buffer, file_offset, p_bytes, p_abort);
 }
 
 t_filesize sync_file::get_size(abort_callback & p_abort) {
@@ -112,45 +122,9 @@ void sync_file::reopen(abort_callback & p_abort) {
 const char sync_fs::prefix[] = "sync://";
 const unsigned sync_fs::prefix_len = 7;
 
-sync_fs_impl::sync_fs_impl() {
-	//using namespace libtorrent;
+//sync_fs_impl::sync_fs_impl() {}
+//sync_fs_impl::~sync_fs_impl() {}
 
-	//session & s = torrent_session;		
-	//error_code ec;
-	// TODO: Initialize torrent client
-	/*s.listen_on(std::make_pair(6881, 6889), ec);
-	if (ec) {
-		console::print(ec.message().c_str());
-		return;
-	}
-
-	s.start_upnp();
-	s.start_natpmp();
-
-	alert_handler_thread = std::thread(&sync_fs_impl::alert_handler, this);*/
-}
-
-sync_fs_impl::~sync_fs_impl() {
-	// TODO: terminate alert_handler thread
-}
-
-/*libtorrent::session & sync_fs_impl::get_torrent_session() {
-	return torrent_session;
-}
-
-decltype(sync_fs_impl::pl) & sync_fs_impl::get_playlist_map() {
-	return pl;
-}
-*/
-
-/*void sync_fs_impl::alert_handler() {
-	using namespace libtorrent;
-
-	while (true) {
-		while (!torrent_session.wait_for_alert(libtorrent::time_duration(1000)));
-		auto a = torrent_session.pop_alert();
-	}
-}*/
 
 bool sync_fs_impl::is_our_path(const char * path) {
 	if (strncmp(path, sync_fs::prefix, sync_fs::prefix_len) == 0) {
@@ -162,30 +136,8 @@ bool sync_fs_impl::is_our_path(const char * path) {
 
 void sync_fs_impl::open(service_ptr_t<file> & p_out, const char * path, t_open_mode mode, abort_callback & p_abort) {
 	console::print("CALLED OUR OPEN");
-
-	pfc::string8 new_path = "http://";
-	new_path += (path + sync_fs::prefix_len);
-	//p_out = service_ptr_t<sync_file>(new sync_file(new_path));
-
-	filesystem::g_open(p_out, new_path, mode, p_abort);
-
-	service_ptr_t<filesystem> fs = filesystem::g_get_interface(new_path);
-
-	if (p_out->can_seek()) {
-		console::print("CAN SEEK :)");
-	}
-	else {
-		console::print("CANNOT SEEK!");
-	}
-	if (fs->supports_content_types()) {
-		console::print("SUPPORTS MIME TYPES :)");
-		pfc::string8 mime;
-		p_out->get_content_type(mime);
-		console::print(mime);
-	}
-	else {
-		console::print("DOES NOT SUPPORT MIME TYPES!");
-	}
+		
+	p_out = service_ptr_t<sync_file>(new sync_file(path));
 }
 
 bool sync_fs_impl::supports_content_types() {

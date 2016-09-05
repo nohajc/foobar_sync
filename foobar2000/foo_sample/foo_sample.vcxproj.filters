@@ -86,6 +86,9 @@
     <ClInclude Include="string_helpers.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="future_ext.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="foo_sample.rc">
