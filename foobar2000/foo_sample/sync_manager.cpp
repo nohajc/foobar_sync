@@ -40,7 +40,7 @@ void sync_manager::on_init() {
 	session & s = *torrent_session;
 	error_code ec;
 	
-	s.set_alert_mask(alert::status_notification | alert::error_notification);
+	s.set_alert_mask(alert::status_notification | alert::progress_notification | alert::error_notification);
 
 	s.listen_on(std::make_pair(6881, 6889), ec);
 	if (ec) {
@@ -74,6 +74,15 @@ void sync_manager::alert_handler() {
 		}
 		auto a = torrent_session->pop_alert();
 		console::printf("Alert received: %s", a->message().c_str());
+
+		switch (a->type()) {
+		case read_piece_alert::alert_type:
+			auto rpa = alert_cast<read_piece_alert>(a.get());
+			sha1_hash ih = rpa->handle.get_torrent_info().info_hash();
+
+			pl[ih]->read_request[rpa->piece].set_value(*rpa);
+			break;
+		}
 	}
 }
 
