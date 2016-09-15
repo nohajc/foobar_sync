@@ -26,6 +26,7 @@
 #include <unordered_map>
 #include <string>
 #include <vector>
+#include <deque>
 #include <algorithm>
 #include <iterator>
 
@@ -69,38 +70,49 @@ decltype(sync_manager::pl) & sync_manager::get_playlist_map() {
 void sync_manager::alert_handler() {
 	using namespace libtorrent;
 
+	std::deque<alert*> alerts;
+
 	while (true) {
-		while (!torrent_session->wait_for_alert(seconds(5))) {
+		while (!torrent_session->wait_for_alert(milliseconds(500))) {
 			//console::print("Waiting for event...");
 		}
-		auto a = torrent_session->pop_alert();
-		console::printf("Alert received: %s", a->message().c_str());
 
-		switch (a->type()) {
-			case read_piece_alert::alert_type: {
-				auto rpa = alert_cast<read_piece_alert>(a.get());
-				sha1_hash ih = rpa->handle.get_torrent_info().info_hash();
-				auto & our_pl = pl[ih];
+		torrent_session->pop_alerts(&alerts);
 
-				sync_playlist::read_piece_task task;
+		for (auto a : alerts) {
+			console::printf("Alert received: %s", a->message().c_str());
 
-				{ // Synchronized access to read_request multimap
-					std::lock_guard<std::mutex> guard(our_pl->read_request_mutex);
+			switch (a->type()) {
+				case read_piece_alert::alert_type: {
+					auto rpa = alert_cast<read_piece_alert>(a);
+					sha1_hash ih = rpa->handle.get_torrent_info().info_hash();
+					auto & our_pl = pl[ih];
 
-					// Find a request for this torrent piece
-					auto it = our_pl->read_request.find(rpa->piece);
-					assert(it != our_pl->read_request.end());
-					// Remove promise from the multimap, move it to this local scope
-					task = std::move(it->second);
-					our_pl->read_request.erase(it);
+					sync_playlist::read_piece_task task;
+
+					{ // Synchronized access to read_request multimap
+						std::lock_guard<std::mutex> guard(our_pl->read_request_mutex);
+
+						// Find a request for this torrent piece
+						auto it = our_pl->read_request.find(rpa->piece);
+						assert(it != our_pl->read_request.end());
+						// Remove promise from the multimap, move it to this local scope
+						task = std::move(it->second);
+						our_pl->read_request.erase(it);
+					}
+
+					// Provide the data to an associated future object
+					task(*rpa); // After the value is set, task can be deleted
+								//promise.set_value(*rpa); // After the value is set, promise can be deleted
+					break;
 				}
-
-				// Provide the data to an associated future object
-				task(*rpa); // After the value is set, task can be deleted
-				//promise.set_value(*rpa); // After the value is set, promise can be deleted
-				break;
+				default:;
 			}
+
+			delete a;
 		}
+
+		alerts.clear();
 	}
 }
 
