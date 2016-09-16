@@ -12,6 +12,7 @@
 #include <thread>
 #include <unordered_map>
 #include <vector>
+#include <functional>
 
 class sync_manager : public initquit {
 	std::unique_ptr<libtorrent::session> torrent_session;
@@ -35,7 +36,7 @@ public:
 	void add_torrent_from_data(const char * data, std::streamsize size);
 	void add_torrent(libtorrent::torrent_info * ti);
 
-	sio::client & get_sio_client();
+	sio::client * get_sio_client();
 
 	static sync_manager & get_instance();
 };

@@ -58,20 +58,20 @@ void sync_manager::on_init() {
 	alert_handler_thread = std::thread(&sync_manager::alert_handler, this);
 
 	// TESTING SOCKET.IO - TODO: add menu commands to trigger specific actions
-	sio::client & h = get_sio_client();
+	sio::client * h = get_sio_client();
+	if (!h) {
+		return;
+	}
 
-	if (!h.opened()) return;
+	auto & socket = h->socket();
 
-	auto & socket = h.socket();
-
-	socket->on("new_room_id", [](sio::event & e) {
+	socket->on("room_added", [](sio::event & e) {
 		auto & msg = e.get_message();
 		assert(msg->flag_string);
 
 		console::print(msg->get_string().c_str());
 	});
-
-	socket->emit("create_room");
+	socket->emit("create_room", { "The Room" });
 }
 
 void sync_manager::on_quit() {
@@ -238,7 +238,7 @@ void sync_manager::add_torrent(libtorrent::torrent_info * ti) {
 	pl[ti->info_hash()] = std::make_unique<sync_playlist>(h);
 }
 
-sio::client & sync_manager::get_sio_client() {
+sio::client * sync_manager::get_sio_client() {
 	static sio_client_initializer ini(SYNC_SRV_URL);
 	return ini.get_client();
 }
