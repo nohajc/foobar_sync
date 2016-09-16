@@ -1,0 +1,20 @@
+{
+  "name": "sync_room",
+  "version": "0.1.0",
+  "description": "Server for playlist synchronization.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Jan Noha",
+  "license": "GPL-3.0",
+  "dependencies": {
+    "base64url": "^2.0.0",
+    "express": "^4.14.0",
+    "socket.io": "^1.4.8"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nohajc/foobar_sync.git"
+  }
+}
