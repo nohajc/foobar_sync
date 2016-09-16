@@ -251,5 +251,5 @@ sync_manager & sync_manager::get_instance() {
 	return inst;
 }
 
-const char sync_manager::SYNC_SRV_URL[] = "http://webdev.fit.cvut.cz:4200";
+const std::string sync_manager::SYNC_SRV_URL = "http://webdev.fit.cvut.cz:4200"; // TODO: make the URL configurable
 //const GUID sync_manager::class_guid = { 0x34afb0fb, 0x48ca, 0x4336,{ 0x8e, 0x09, 0x9e, 0x05, 0x2b, 0xe2, 0x4c, 0xefd } };

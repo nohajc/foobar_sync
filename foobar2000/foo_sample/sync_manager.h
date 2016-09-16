@@ -13,6 +13,7 @@
 #include <unordered_map>
 #include <vector>
 #include <functional>
+#include <string>
 
 class sync_manager : public initquit {
 	std::unique_ptr<libtorrent::session> torrent_session;
@@ -20,7 +21,7 @@ class sync_manager : public initquit {
 	// TODO: We want this to be unordered map - template specialization for hash<sha1_hash> has to be written
 	std::map<libtorrent::sha1_hash, std::unique_ptr<sync_playlist>> pl;
 
-	static const char SYNC_SRV_URL[];
+	static const std::string SYNC_SRV_URL;
 public:
 	virtual void on_init();
 

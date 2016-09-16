@@ -3,7 +3,7 @@
 
 #include <future>
 
-sio_client_initializer::sio_client_initializer(const char * url) {
+sio_client_initializer::sio_client_initializer(const std::string & url) {
 	std::promise<bool> connected;
 	auto connected_future = connected.get_future();
 
