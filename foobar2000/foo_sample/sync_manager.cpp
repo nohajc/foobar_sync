@@ -4,6 +4,8 @@
 #include "sync_manager.h"
 #include "sync_playlist.h"
 
+#include "sio_client_initializer.h"
+
 #include <libtorrent/entry.hpp>
 #include <libtorrent/bencode.hpp>
 #include <libtorrent/session.hpp>
@@ -54,6 +56,22 @@ void sync_manager::on_init() {
 	s.start_natpmp();
 
 	alert_handler_thread = std::thread(&sync_manager::alert_handler, this);
+
+	// TESTING SOCKET.IO - TODO: add menu commands to trigger specific actions
+	sio::client & h = get_sio_client();
+
+	if (!h.opened()) return;
+
+	auto & socket = h.socket();
+
+	socket->on("new_room_id", [](sio::event & e) {
+		auto & msg = e.get_message();
+		assert(msg->flag_string);
+
+		console::print(msg->get_string().c_str());
+	});
+
+	socket->emit("create_room");
 }
 
 void sync_manager::on_quit() {
@@ -220,6 +238,11 @@ void sync_manager::add_torrent(libtorrent::torrent_info * ti) {
 	pl[ti->info_hash()] = std::make_unique<sync_playlist>(h);
 }
 
+sio::client & sync_manager::get_sio_client() {
+	static sio_client_initializer ini(SYNC_SRV_URL);
+	return ini.get_client();
+}
+
 static initquit_factory_t<sync_manager> g_sync_manager;
 
 sync_manager & sync_manager::get_instance() {
@@ -228,4 +251,5 @@ sync_manager & sync_manager::get_instance() {
 	return inst;
 }
 
+const char sync_manager::SYNC_SRV_URL[] = "http://webdev.fit.cvut.cz:4200";
 //const GUID sync_manager::class_guid = { 0x34afb0fb, 0x48ca, 0x4336,{ 0x8e, 0x09, 0x9e, 0x05, 0x2b, 0xe2, 0x4c, 0xefd } };

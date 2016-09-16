@@ -110,6 +110,7 @@
     <ClCompile Include="playback_state.cpp" />
     <ClCompile Include="playlist_uploader.cpp" />
     <ClCompile Include="preferences.cpp" />
+    <ClCompile Include="sio_client_initializer.cpp" />
     <ClCompile Include="string_helpers.cpp" />
     <ClCompile Include="sync_manager.cpp" />
     <ClCompile Include="sync_playlist.cpp" />
@@ -118,6 +119,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h" />
+    <ClInclude Include="sio_client_initializer.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="string_helpers.h" />
     <ClInclude Include="sync_fs.h" />
@@ -146,6 +148,9 @@
     </ProjectReference>
     <ProjectReference Include="..\SDK\foobar2000_SDK.vcxproj">
       <Project>{e8091321-d79d-4575-86ef-064ea1a4a20d}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\socket.io\socket.io.vcxproj">
+      <Project>{158c14b3-4f2b-4a00-828f-23a777673363}</Project>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

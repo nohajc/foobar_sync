@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
-VisualStudioVersion = 14.0.23107.0
+VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "foo_sample", "foo_sample.vcxproj", "{85FBFD09-0099-4FE9-9DB6-78DB6F60F817}"
 EndProject
@@ -14,6 +14,8 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "foobar2000_sdk_helpers", "..\helpers\foobar2000_sdk_helpers.vcxproj", "{EE47764E-A202-4F85-A767-ABDAB4AFF35F}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "foobar2000_component_client", "..\foobar2000_component_client\foobar2000_component_client.vcxproj", "{71AD2674-065B-48F5-B8B0-E1F9D3892081}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "socket.io", "..\socket.io\socket.io.vcxproj", "{158C14B3-4F2B-4A00-828F-23A777673363}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -69,6 +71,14 @@ Global
 		{71AD2674-065B-48F5-B8B0-E1F9D3892081}.Release|x64.Build.0 = Release|x64
 		{71AD2674-065B-48F5-B8B0-E1F9D3892081}.Release|x86.ActiveCfg = Release|Win32
 		{71AD2674-065B-48F5-B8B0-E1F9D3892081}.Release|x86.Build.0 = Release|Win32
+		{158C14B3-4F2B-4A00-828F-23A777673363}.Debug|x64.ActiveCfg = Debug|x64
+		{158C14B3-4F2B-4A00-828F-23A777673363}.Debug|x64.Build.0 = Debug|x64
+		{158C14B3-4F2B-4A00-828F-23A777673363}.Debug|x86.ActiveCfg = Debug|Win32
+		{158C14B3-4F2B-4A00-828F-23A777673363}.Debug|x86.Build.0 = Debug|Win32
+		{158C14B3-4F2B-4A00-828F-23A777673363}.Release|x64.ActiveCfg = Release|x64
+		{158C14B3-4F2B-4A00-828F-23A777673363}.Release|x64.Build.0 = Release|x64
+		{158C14B3-4F2B-4A00-828F-23A777673363}.Release|x86.ActiveCfg = Release|Win32
+		{158C14B3-4F2B-4A00-828F-23A777673363}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
