@@ -20,7 +20,9 @@ io.on('connection', function(socket) {
 	});
 
 	socket.on('create_room', function(name) {
-		socket.emit('room_added', name);
+		io.emit('room_added', name); // Broadcast to all
+		// The one who created the room joins it automatically
+		socket.join(name);
 	});
 });
 
