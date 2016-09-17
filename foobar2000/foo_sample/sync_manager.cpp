@@ -59,21 +59,12 @@ void sync_manager::on_init() {
 	sio_ini = std::make_unique<sio_client_initializer>();
 
 	// TESTING SOCKET.IO - TODO: add menu commands to trigger specific actions
-	sio::client * h = get_sio_client();
-	//sio::client * h = nullptr;
+	/*sio::client * h = get_sio_client();
 	if (!h) {
 		return;
-	}
+	}*/
 
-	auto & socket = h->socket();
-
-	socket->on("room_added", [](sio::event & e) {
-		auto & msg = e.get_message();
-		assert(msg->flag_string);
-
-		console::print(msg->get_string().c_str());
-	});
-	socket->emit("create_room", { "The Room" });
+	setup_sync_room_event_handlers();
 }
 
 void sync_manager::on_quit() {
@@ -257,6 +248,41 @@ sio::client * sync_manager::get_sio_client() {
 		cl = sio_ini->get_client();
 	}
 	return cl;
+}
+
+void sync_manager::setup_sync_room_event_handlers() {
+	auto h = get_sio_client();
+	if (!h) {
+		return;
+	}
+	auto & socket = h->socket();
+
+	socket->on("room_added", [this](sio::event & e) {
+		auto & msg = e.get_message();
+		assert(msg->flag_string);
+		console::print(msg->get_string().c_str());
+
+		{
+			std::lock_guard<std::mutex> guard(sync_room_list_mutex);
+			sync_room_list.insert(msg->get_string());
+		} // TODO: notify sync_room_window
+	});
+}
+
+void sync_manager::create_sync_room(const std::string & name) {
+	auto h = get_sio_client();
+	auto & socket = h->socket();
+
+	socket->emit("create_room", { name });
+	sync_room_joined = name;
+}
+
+std::set<std::string>& sync_manager::get_sync_room_list() {
+	return sync_room_list;
+}
+
+bool sync_manager::sync_room_is_joined(const std::string & name) {
+	return sync_room_joined == name;
 }
 
 static initquit_factory_t<sync_manager> g_sync_manager;

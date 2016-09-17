@@ -115,6 +115,7 @@
     <ClCompile Include="sync_manager.cpp" />
     <ClCompile Include="sync_playlist.cpp" />
     <ClCompile Include="sync_fs.cpp" />
+    <ClCompile Include="sync_room_window.cpp" />
     <ClCompile Include="ui_element.cpp" />
   </ItemGroup>
   <ItemGroup>
