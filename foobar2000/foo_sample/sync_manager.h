@@ -15,11 +15,12 @@
 #include <vector>
 #include <functional>
 #include <string>
+#include <atomic>
 
 class sync_manager : public initquit {
 	std::unique_ptr<libtorrent::session> torrent_session;
 	std::thread alert_handler_thread;
-	bool app_running;
+	std::atomic<bool> app_running;
 	// TODO: We want this to be unordered map - template specialization for hash<sha1_hash> has to be written
 	std::map<libtorrent::sha1_hash, std::unique_ptr<sync_playlist>> pl;
 
