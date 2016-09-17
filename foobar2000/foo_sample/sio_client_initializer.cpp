@@ -1,19 +1,30 @@
 #include "stdafx.h"
 #include "sio_client_initializer.h"
 
-#include <future>
+void sio_client_initializer::cleanup() {
+	if (is_connected) {
+		h.sync_close();
+	}
+}
 
-sio_client_initializer::sio_client_initializer(const std::string & url) {
-	std::promise<bool> connected;
-	auto connected_future = connected.get_future();
+void sio_client_initializer::connect(const std::string & url) {
+	connected_future = connected_promise.get_future();
 
-	h.set_open_listener([&connected]() {
-		connected.set_value(true);
-	});
+	h.set_reconnect_attempts(0);
 
-	h.set_fail_listener([&connected]() {
-		connected.set_value(false);
-	});
+	open_listener = [this]() {
+		connected_promise.set_value(true);
+	};
+	h.set_open_listener(open_listener);
+
+	/*h.set_reconnect_listener([](unsigned a, unsigned b) {
+		console::print("Reconnect.");
+	});*/
+
+	fail_listener = [this]() {
+		connected_promise.set_value(false);
+	};
+	h.set_fail_listener(fail_listener);
 
 	h.connect(url);
 	is_connected = connected_future.get();

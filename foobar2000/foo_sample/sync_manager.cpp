@@ -4,8 +4,6 @@
 #include "sync_manager.h"
 #include "sync_playlist.h"
 
-#include "sio_client_initializer.h"
-
 #include <libtorrent/entry.hpp>
 #include <libtorrent/bencode.hpp>
 #include <libtorrent/session.hpp>
@@ -55,10 +53,12 @@ void sync_manager::on_init() {
 	s.start_upnp();
 	s.start_natpmp();
 
+	app_running = true;
 	alert_handler_thread = std::thread(&sync_manager::alert_handler, this);
 
 	// TESTING SOCKET.IO - TODO: add menu commands to trigger specific actions
-	sio::client * h = get_sio_client();
+	//sio::client * h = get_sio_client();
+	sio::client * h = nullptr;
 	if (!h) {
 		return;
 	}
@@ -75,6 +75,10 @@ void sync_manager::on_init() {
 }
 
 void sync_manager::on_quit() {
+	//sio_ini.cleanup();
+	app_running = false;
+	alert_handler_thread.join();
+	torrent_session.reset();
 }
 
 libtorrent::session & sync_manager::get_torrent_session() {
@@ -90,9 +94,12 @@ void sync_manager::alert_handler() {
 
 	std::deque<alert*> alerts;
 
-	while (true) {
+	while (app_running) {
 		while (!torrent_session->wait_for_alert(milliseconds(500))) {
 			//console::print("Waiting for event...");
+			if (!app_running) {
+				return;
+			}
 		}
 
 		torrent_session->pop_alerts(&alerts);
@@ -238,10 +245,14 @@ void sync_manager::add_torrent(libtorrent::torrent_info * ti) {
 	pl[ti->info_hash()] = std::make_unique<sync_playlist>(h);
 }
 
-sio::client * sync_manager::get_sio_client() {
-	static sio_client_initializer ini(SYNC_SRV_URL);
-	return ini.get_client();
-}
+/*sio::client * sync_manager::get_sio_client() {
+	auto cl = sio_ini.get_client();
+	if (cl == nullptr) {
+		sio_ini.connect(SYNC_SRV_URL);
+		cl = sio_ini.get_client();
+	}
+	return cl;
+}*/
 
 static initquit_factory_t<sync_manager> g_sync_manager;
 
