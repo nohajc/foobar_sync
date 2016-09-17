@@ -56,9 +56,11 @@ void sync_manager::on_init() {
 	app_running = true;
 	alert_handler_thread = std::thread(&sync_manager::alert_handler, this);
 
+	sio_ini = std::make_unique<sio_client_initializer>();
+
 	// TESTING SOCKET.IO - TODO: add menu commands to trigger specific actions
-	//sio::client * h = get_sio_client();
-	sio::client * h = nullptr;
+	sio::client * h = get_sio_client();
+	//sio::client * h = nullptr;
 	if (!h) {
 		return;
 	}
@@ -75,7 +77,10 @@ void sync_manager::on_init() {
 }
 
 void sync_manager::on_quit() {
-	//sio_ini.cleanup();
+	// This creates memory leak at exit.
+	// It is a workaround for heap corruption error
+	// which occurs during sio::client destruction.
+	sio_ini.release();
 	app_running = false;
 	alert_handler_thread.join();
 	torrent_session.reset();
@@ -245,14 +250,14 @@ void sync_manager::add_torrent(libtorrent::torrent_info * ti) {
 	pl[ti->info_hash()] = std::make_unique<sync_playlist>(h);
 }
 
-/*sio::client * sync_manager::get_sio_client() {
-	auto cl = sio_ini.get_client();
+sio::client * sync_manager::get_sio_client() {
+	auto cl = sio_ini->get_client();
 	if (cl == nullptr) {
-		sio_ini.connect(SYNC_SRV_URL);
-		cl = sio_ini.get_client();
+		sio_ini->connect(SYNC_SRV_URL);
+		cl = sio_ini->get_client();
 	}
 	return cl;
-}*/
+}
 
 static initquit_factory_t<sync_manager> g_sync_manager;
 
