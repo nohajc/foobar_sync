@@ -43,6 +43,7 @@ io.on('connection', function(socket) {
 
 	socket.on('join_room', function(name) {
 		joinRoomExclusively(socket, name);
+		io.emit('room_list', io.sockets.adapter.rooms);
 	});
 
 	socket.on('list_rooms', function() {
