@@ -258,7 +258,7 @@ void sync_manager::setup_sync_room_event_handlers() {
 	}
 	auto & socket = h->socket();
 
-	socket->on("room_added", [this](sio::event & e) {
+	/*socket->on("room_added", [this](sio::event & e) {
 		auto & msg = e.get_message();
 		assert(msg->flag_string);
 		console::print(msg->get_string().c_str());
@@ -270,7 +270,7 @@ void sync_manager::setup_sync_room_event_handlers() {
 		if (update_window_callback) {
 			update_window_callback();
 		}
-	});
+	});*/
 
 	socket->on("room_list", [this](sio::event & e) {
 		auto & msg = e.get_message();
