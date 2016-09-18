@@ -9,6 +9,16 @@ function randBytesAsBase64Url(size) {
 	return base64url(crypto.randomBytes(size))
 }
 
+function joinRoomExclusively(socket, name) {
+	if (socket.last_joined != undefined) {
+		socket.leave(socket.last_joined);
+		console.log('User ' + socket.id + ' left "' + socket.last_joined + '"');
+	}
+	socket.join(name);
+	socket.last_joined = name;
+	console.log('User ' + socket.id + ' joined "' + name + '"');
+}
+
 app.get('/', function(req, res) {
 	res.sendFile(__dirname + '/index.html');
 });
@@ -26,20 +36,12 @@ io.on('connection', function(socket) {
 	socket.on('create_room', function(name) {
 		io.emit('room_added', name); // Broadcast to all
 		// The one who created the room joins it automatically
-		socket.join(name);
-		socket.last_joined = name;
 		console.log('Room "' + name + '" created');
-		console.log('User ' + socket.id + ' joined "' + name + '"');
+		joinRoomExclusively(socket, name);
 	});
 
 	socket.on('join_room', function(name) {
-		if (socket.last_joined != undefined) {
-			socket.leave(socket.last_joined);
-			console.log('User ' + socket.id + ' left "' + name + '"');
-		}
-		socket.join(name);
-		socket.last_joined = name;
-		console.log('User ' + socket.id + ' joined "' + name + '"');
+		joinRoomExclusively(socket, name);
 	});
 
 	socket.on('list_rooms', function() {
