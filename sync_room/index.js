@@ -34,7 +34,7 @@ io.on('connection', function(socket) {
 	});
 
 	socket.on('list_rooms', function() {
-		socket.emit('room_list', io.rooms)
+		socket.emit('room_list', io.sockets.adapter.rooms)
 		console.log(io.sockets.adapter.rooms)
 	});
 });
