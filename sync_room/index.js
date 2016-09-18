@@ -32,8 +32,12 @@ io.on('connection', function(socket) {
 	});
 
 	socket.on('join_room', function(name) {
+		if (socket.last_joined != undefined) {
+			socket.leave(socket.last_joined);
+			console.log('User ' + socket.id + ' left "' + name + '"');
+		}
 		socket.join(name);
-		// TODO: leave other rooms using io.sockets.manager.roomClients[socket.id]
+		socket.last_joined = name;
 		console.log('User ' + socket.id + ' joined "' + name + '"');
 	});
 
