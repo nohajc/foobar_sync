@@ -27,7 +27,8 @@ class sync_manager : public initquit {
 	std::map<libtorrent::sha1_hash, std::unique_ptr<sync_playlist>> pl;
 
 	std::unique_ptr<sio_client_initializer> sio_ini;
-	static const std::string SYNC_SRV_URL;
+	static std::string sync_srv_url;
+	static std::string tracker_url; // TODO: maybe we could use multiple trackers
 
 	std::set<std::string> sync_room_list;
 	std::mutex sync_room_list_mutex;
@@ -49,6 +50,9 @@ public:
 	void add_torrent_from_url(const char * url);
 	void add_torrent_from_data(const char * data, std::streamsize size);
 	void add_torrent(libtorrent::torrent_info * ti);
+
+	void share_playlist_as_torrent_async(pfc::list_t<metadb_handle_ptr> items);
+	void share_playlist_as_torrent(pfc::list_t<metadb_handle_ptr> items);
 
 	sio::client * get_sio_client();
 

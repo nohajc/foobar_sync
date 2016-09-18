@@ -101,6 +101,9 @@
     <ClInclude Include="create_room_dialog.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="void_async.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="foo_sample.rc">

@@ -32,6 +32,7 @@ public:
 		COMMAND_CODE_HANDLER(BN_CLICKED, OnButtonClick)
 		COMMAND_HANDLER_EX(ID_CREATE_ROOM_BUTTON, BN_CLICKED, OnCreateRoom)
 		COMMAND_HANDLER_EX(ID_JOIN_ROOM_BUTTON, BN_CLICKED, OnJoinRoom)
+		COMMAND_HANDLER_EX(ID_SYNC_PL_BUTTON, BN_CLICKED, OnSyncPlaylist)
 		COMMAND_HANDLER_EX(ID_SETTINGS_BUTTON, BN_CLICKED, OnSettings)
 	END_MSG_MAP()
 
@@ -87,6 +88,12 @@ public:
 		update_sync_room_list();
 	}
 
+	void OnSyncPlaylist(UINT, int, CWindow) {
+		pfc::list_t<metadb_handle_ptr> complete_plist;
+		static_api_ptr_t<playlist_manager>()->activeplaylist_get_all_items(complete_plist);
+		m_manager.share_playlist_as_torrent_async(complete_plist);
+	}
+
 	void OnSettings(UINT, int, CWindow) {
 		last_clicked = &m_settings_button;
 	}
@@ -120,19 +127,33 @@ public:
 	LRESULT OnCreate(LPCREATESTRUCT param) {
 		t_ui_font font = m_callback->query_font_ex(ui_font_default);
 
-		m_sync_room_listbox.Create(*this, CRect(0, 0, 380, 250), 0, WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_GROUP);
+		m_sync_room_listbox.Create(*this, CRect(0, 0, 372, 250), 0, WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_GROUP);
 		update_sync_room_list();
 
-		m_create_room_button.Create(*this, CRect(0, 270, 120, 300), TEXT("Create room..."), WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_GROUP, 0, ID_CREATE_ROOM_BUTTON);
-		m_join_room_button.Create(*this, CRect(130, 270, 250, 300), TEXT("Join room"), WS_CHILD | WS_VISIBLE | WS_TABSTOP, 0, ID_JOIN_ROOM_BUTTON);
-		m_settings_button.Create(*this, CRect(260, 270, 380, 300), TEXT("Settings..."), WS_CHILD | WS_VISIBLE | WS_TABSTOP, 0, ID_SETTINGS_BUTTON);
+		int x = 0, y = 270;
+		CRect button_rect(x, y, x + BUTTON_WIDTH, y + BUTTON_HEIGHT);
+		auto rect_next = [&button_rect]() {
+			button_rect.left += BUTTON_WIDTH + BUTTON_GAP;
+			button_rect.right += BUTTON_WIDTH + BUTTON_GAP;
+		};
+
+		m_create_room_button.Create(*this, button_rect, TEXT("Create room..."), WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_GROUP, 0, ID_CREATE_ROOM_BUTTON);
+		rect_next();
+		m_join_room_button.Create(*this, button_rect, TEXT("Join room"), WS_CHILD | WS_VISIBLE | WS_TABSTOP, 0, ID_JOIN_ROOM_BUTTON);
+		rect_next();
+		m_sync_pl_button.Create(*this, button_rect, TEXT("Sync playlist"), WS_CHILD | WS_VISIBLE | WS_TABSTOP, 0, ID_SYNC_PL_BUTTON);
+		rect_next();
+		m_settings_button.Create(*this, button_rect, TEXT("Settings..."), WS_CHILD | WS_VISIBLE | WS_TABSTOP, 0, ID_SETTINGS_BUTTON);
 
 		SetFont(font);
 
 		m_sync_room_listbox.SetFont(font);
 		m_create_room_button.SetFont(font);
 		m_join_room_button.SetFont(font);
+		m_sync_pl_button.SetFont(font);
 		m_settings_button.SetFont(font);
+
+		//SetWindowPos(HWND_TOPMOST, 0, 0, 380, 300, SWP_NOMOVE); // Has no effect
 
 		return 0;
 	}
@@ -162,16 +183,22 @@ private:
 	CListBox m_sync_room_listbox;
 	CButton m_create_room_button;
 	CButton m_join_room_button;
+	CButton m_sync_pl_button;
 	CButton m_settings_button;
 	CButton * last_clicked;
 	CCreateRoomDiag m_create_room_diag;
 
 	std::unordered_map<int, std::string> m_sync_room_name_table;
 
-	enum {ID_CREATE_ROOM_BUTTON = 7, ID_JOIN_ROOM_BUTTON, ID_SETTINGS_BUTTON};
+	enum {ID_CREATE_ROOM_BUTTON = 7, ID_JOIN_ROOM_BUTTON, ID_SYNC_PL_BUTTON, ID_SETTINGS_BUTTON};
+	static const int BUTTON_WIDTH, BUTTON_HEIGHT, BUTTON_GAP;
 protected:
 	const ui_element_instance_callback_ptr m_callback;
 };
+
+const int sync_room_window::BUTTON_WIDTH = 90;
+const int sync_room_window::BUTTON_HEIGHT = 30;
+const int sync_room_window::BUTTON_GAP = 4;
 
 // ui_element_impl_withpopup autogenerates standalone version of our component and proper menu commands. Use ui_element_impl instead if you don't want that.
 class ui_element_sync_room_window : public ui_element_impl_withpopup<sync_room_window> {};

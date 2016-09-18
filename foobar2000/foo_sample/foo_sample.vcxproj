@@ -128,6 +128,7 @@
     <ClInclude Include="sync_fs.h" />
     <ClInclude Include="sync_manager.h" />
     <ClInclude Include="sync_playlist.h" />
+    <ClInclude Include="void_async.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="foo_sample.rc" />

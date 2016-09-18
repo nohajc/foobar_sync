@@ -1,5 +1,6 @@
 #include "stdafx.h"
 
+#include "void_async.h"
 #include "string_helpers.h"
 #include "sync_manager.h"
 #include "sync_playlist.h"
@@ -237,10 +238,24 @@ void sync_manager::add_torrent(libtorrent::torrent_info * ti) {
 	pl[ti->info_hash()] = std::make_unique<sync_playlist>(h);
 }
 
+void sync_manager::share_playlist_as_torrent_async(pfc::list_t<metadb_handle_ptr> items) {
+	void_async(&sync_manager::share_playlist_as_torrent, this, items);
+}
+
+void sync_manager::share_playlist_as_torrent(pfc::list_t<metadb_handle_ptr> items) {
+	using namespace libtorrent;
+
+	session & s = *torrent_session;
+	
+	for (t_size i = 0; i < items.get_count(); i++) {
+		console::print(items[i]->get_path());
+	}
+}
+
 sio::client * sync_manager::get_sio_client() {
 	auto cl = sio_ini->get_client();
 	if (cl == nullptr) {
-		sio_ini->connect(SYNC_SRV_URL);
+		sio_ini->connect(sync_srv_url);
 		cl = sio_ini->get_client();
 
 		if (cl && !sync_room_event_handlers_set) {
@@ -340,5 +355,6 @@ sync_manager & sync_manager::get_instance() {
 	return inst;
 }
 
-const std::string sync_manager::SYNC_SRV_URL = "http://webdev.fit.cvut.cz:4200"; // TODO: make the URL configurable
+std::string sync_manager::sync_srv_url = "http://webdev.fit.cvut.cz:4200"; // TODO: make the URL configurable
+std::string sync_manager::tracker_url = "udp://tracker.opentrackr.org:1337";
 //const GUID sync_manager::class_guid = { 0x34afb0fb, 0x48ca, 0x4336,{ 0x8e, 0x09, 0x9e, 0x05, 0x2b, 0xe2, 0x4c, 0xefd } };
