@@ -277,6 +277,11 @@ void sync_manager::setup_sync_room_event_handlers() {
 		assert(msg->flag_object);
 		auto & obj = msg->get_map();
 
+		{
+			std::lock_guard<std::mutex> guard(sync_room_list_mutex);
+			sync_room_list.clear();
+		}
+
 		console::print("GOT ROOM LIST:");
 		for (auto & it : obj) {
 			const std::string & room_name = it.first;
