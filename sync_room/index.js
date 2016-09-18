@@ -32,6 +32,11 @@ io.on('connection', function(socket) {
 		// TODO: leave other rooms using io.sockets.manager.roomClients[socket.id]
 		console.log('User ' + socket.id + ' joined "' + name + '"');
 	});
+
+	socket.on('list_rooms', function() {
+		socket.emit('room_list', io.rooms)
+		console.log(io.rooms)
+	});
 });
 
 http.listen(4200, function() {
