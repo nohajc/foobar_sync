@@ -23,6 +23,14 @@ io.on('connection', function(socket) {
 		io.emit('room_added', name); // Broadcast to all
 		// The one who created the room joins it automatically
 		socket.join(name);
+		console.log('Room "' + name + '" created');
+		console.log('User ' + socket.id + ' joined "' + name '"');
+	});
+
+	socket.on('join_room', function(name) {
+		socket.join(name);
+		// TODO: leave other rooms using io.sockets.manager.roomClients[socket.id]
+		console.log('User ' + socket.id + ' joined "' + name '"');
 	});
 });
 
