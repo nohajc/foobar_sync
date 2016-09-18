@@ -28,6 +28,10 @@ void sio_client_initializer::really_connect(const std::string & url) {
 
 	h.connect(url);
 	is_connected = connected_future.get();
+
+	if (is_connected) { // Get list of rooms when first connected
+		h.socket()->emit("list_rooms");
+	}
 }
 
 void sio_client_initializer::connect(const std::string & url) {

@@ -59,6 +59,7 @@ void sync_manager::on_init() {
 	sio_ini = std::make_unique<sio_client_initializer>();
 
 	update_window_callback = nullptr;
+	sync_room_event_handlers_set = false;
 	setup_sync_room_event_handlers();
 }
 
@@ -241,7 +242,12 @@ sio::client * sync_manager::get_sio_client() {
 	if (cl == nullptr) {
 		sio_ini->connect(SYNC_SRV_URL);
 		cl = sio_ini->get_client();
+
+		if (cl && !sync_room_event_handlers_set) {
+			setup_sync_room_event_handlers();
+		}
 	}
+	
 	return cl;
 }
 
@@ -265,6 +271,30 @@ void sync_manager::setup_sync_room_event_handlers() {
 			update_window_callback();
 		}
 	});
+
+	socket->on("room_list", [this](sio::event & e) {
+		auto & msg = e.get_message();
+		assert(msg->flag_object);
+		auto & obj = msg->get_map();
+
+		console::print("GOT ROOM LIST:");
+		for (auto & it : obj) {
+			const std::string & room_name = it.first;
+			if (room_name.substr(0, 2) != "/#") {
+				console::print(it.first.c_str());
+				{
+					std::lock_guard<std::mutex> guard(sync_room_list_mutex);
+					sync_room_list.insert(room_name);
+				}
+			}
+		}
+
+		if (update_window_callback) {
+			update_window_callback();
+		}
+	});
+
+	sync_room_event_handlers_set = true;
 }
 
 void sync_manager::create_sync_room(const std::string & name) {

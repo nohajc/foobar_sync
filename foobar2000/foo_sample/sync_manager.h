@@ -34,6 +34,7 @@ class sync_manager : public initquit {
 	std::string sync_room_joined;
 
 	std::function<void()> update_window_callback;
+	bool sync_room_event_handlers_set;
 public:
 	virtual void on_init();
 
