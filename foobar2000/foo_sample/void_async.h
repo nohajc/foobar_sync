@@ -19,7 +19,11 @@ void void_async(Function&& f, Args&&... args) {
 	std::promise<void> is_moved;
 	auto valid_future = valid.get_future();
 	auto moved_future = is_moved.get_future();
-	future = std::async(async_wrapper<Function, Args...>, std::forward<Function>(f), std::forward<Args>(args)..., std::ref(future), std::move(valid_future), std::move(is_moved));
+	future = std::async(
+		async_wrapper<Function, Args...>,
+		std::forward<Function>(f), std::forward<Args>(args)...,
+		std::ref(future), std::move(valid_future), std::move(is_moved)
+	);
 	valid.set_value();
 	moved_future.wait();
 }
