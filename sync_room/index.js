@@ -34,10 +34,11 @@ io.on('connection', function(socket) {
 	});
 
 	socket.on('create_room', function(name) {
-		io.emit('room_added', name); // Broadcast to all
+		//io.emit('room_added', name); // Broadcast to all
 		// The one who created the room joins it automatically
 		console.log('Room "' + name + '" created');
 		joinRoomExclusively(socket, name);
+		io.emit('room_list', io.sockets.adapter.rooms);
 	});
 
 	socket.on('join_room', function(name) {
