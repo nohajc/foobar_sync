@@ -275,11 +275,15 @@ void sync_manager::create_sync_room(const std::string & name) {
 	auto & socket = h->socket();
 
 	socket->emit("create_room", { name });
-	sync_room_joined = name; // Join automatically
+	sync_room_joined = name;
 }
 
 void sync_manager::join_sync_room(const std::string & name) {
-	// TODO: implement
+	auto h = get_sio_client();
+	auto & socket = h->socket();
+
+	socket->emit("join_room", { name });
+	sync_room_joined = name;
 }
 
 std::set<std::string>& sync_manager::get_sync_room_list() {

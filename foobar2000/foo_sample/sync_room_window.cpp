@@ -6,6 +6,7 @@
 #include "create_room_dialog.h"
 
 #include <functional>
+#include <unordered_map>
 
 /*class sync_room_frame : public CDialogImpl<sync_room_frame> {
 public:
@@ -72,8 +73,14 @@ public:
 				console::print("Clicked CREATE ROOM");
 				m_create_room_diag.DoModal();
 				break;
-			case JOIN_ROOM_BUTTON:
+			case JOIN_ROOM_BUTTON: {
 				console::print("Clicked JOIN ROOM");
+				int idx = m_sync_room_listbox.GetCurSel();
+				auto & room_name = m_sync_room_name_table[idx];
+				m_manager.join_sync_room(room_name);
+				update_sync_room_list();
+			}
+					
 				break;
 			case SETTINGS_ROOM_BUTTON:
 				console::print("Clicked SETTINGS");
@@ -123,6 +130,7 @@ public:
 		auto sr_list = m_manager.get_sync_room_list();
 
 		m_sync_room_listbox.ResetContent();
+		m_sync_room_name_table.clear();
 		for (auto & r : sr_list) {
 			std::string item;
 			if (m_manager.sync_room_is_joined(r)) {
@@ -131,7 +139,8 @@ public:
 			else {
 				item = r;
 			}
-			m_sync_room_listbox.AddString(stringToWstring(item).c_str());
+			int idx = m_sync_room_listbox.AddString(stringToWstring(item).c_str());
+			m_sync_room_name_table[idx] = r;
 		}
 	}
 private:
@@ -144,6 +153,8 @@ private:
 	CButton m_join_room_button;
 	CButton m_settings_room_button;
 	CCreateRoomDiag m_create_room_diag;
+
+	std::unordered_map<int, std::string> m_sync_room_name_table;
 
 	enum {CREATE_ROOM_BUTTON = 7, JOIN_ROOM_BUTTON, SETTINGS_ROOM_BUTTON};
 protected:
