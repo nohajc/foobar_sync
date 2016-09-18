@@ -32,6 +32,8 @@ class sync_manager : public initquit {
 	std::set<std::string> sync_room_list;
 	std::mutex sync_room_list_mutex;
 	std::string sync_room_joined;
+
+	std::function<void()> update_window_callback;
 public:
 	virtual void on_init();
 
@@ -51,8 +53,10 @@ public:
 
 	void setup_sync_room_event_handlers();
 	void create_sync_room(const std::string & name);
+	void join_sync_room(const std::string & name);
 	std::set<std::string> & get_sync_room_list();
 	bool sync_room_is_joined(const std::string & name);
+	void register_update_window_callback(const std::function<void()> & fn);
 
 	static sync_manager & get_instance();
 };

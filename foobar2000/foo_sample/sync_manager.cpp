@@ -58,13 +58,11 @@ void sync_manager::on_init() {
 
 	sio_ini = std::make_unique<sio_client_initializer>();
 
-	// TESTING SOCKET.IO - TODO: add menu commands to trigger specific actions
-	/*sio::client * h = get_sio_client();
-	if (!h) {
-		return;
-	}*/
-
+	update_window_callback = nullptr;
 	setup_sync_room_event_handlers();
+
+	// TEST!
+	create_sync_room("The Room");
 }
 
 void sync_manager::on_quit() {
@@ -265,7 +263,10 @@ void sync_manager::setup_sync_room_event_handlers() {
 		{
 			std::lock_guard<std::mutex> guard(sync_room_list_mutex);
 			sync_room_list.insert(msg->get_string());
-		} // TODO: notify sync_room_window
+		}
+		if (update_window_callback) {
+			update_window_callback();
+		}
 	});
 }
 
@@ -274,7 +275,11 @@ void sync_manager::create_sync_room(const std::string & name) {
 	auto & socket = h->socket();
 
 	socket->emit("create_room", { name });
-	sync_room_joined = name;
+	sync_room_joined = name; // Join automatically
+}
+
+void sync_manager::join_sync_room(const std::string & name) {
+	// TODO: implement
 }
 
 std::set<std::string>& sync_manager::get_sync_room_list() {
@@ -283,6 +288,10 @@ std::set<std::string>& sync_manager::get_sync_room_list() {
 
 bool sync_manager::sync_room_is_joined(const std::string & name) {
 	return sync_room_joined == name;
+}
+
+void sync_manager::register_update_window_callback(const std::function<void()> & fn) {
+	update_window_callback = fn;
 }
 
 static initquit_factory_t<sync_manager> g_sync_manager;

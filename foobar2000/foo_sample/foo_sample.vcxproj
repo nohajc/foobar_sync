@@ -96,6 +96,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="contextmenu.cpp" />
+    <ClCompile Include="create_room_dialog.cpp" />
     <ClCompile Include="decode.cpp" />
     <ClCompile Include="dsp.cpp" />
     <ClCompile Include="initquit.cpp" />
@@ -119,6 +120,7 @@
     <ClCompile Include="ui_element.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="create_room_dialog.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="sio_client_initializer.h" />
     <ClInclude Include="stdafx.h" />

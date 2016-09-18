@@ -1,6 +1,11 @@
 #include "stdafx.h"
 #include "resource.h"
 #include "sync_manager.h"
+#include "string_helpers.h"
+
+#include "create_room_dialog.h"
+
+#include <functional>
 
 /*class sync_room_frame : public CDialogImpl<sync_room_frame> {
 public:
@@ -16,20 +21,23 @@ public:
 	}
 };*/
 
-class sync_room_window : public ui_element_instance, public CWindowImpl<sync_room_window> {
+class sync_room_window : public ui_element_instance, public CWindowImpl<sync_room_window>, public CMessageFilter {
 public:
 	BEGIN_MSG_MAP(sync_room_window)
 		MSG_WM_ERASEBKGND(OnEraseBkgnd)
 		MSG_WM_PAINT(OnPaint)
 		MSG_WM_CREATE(OnCreate)
+		MSG_WM_COMMAND(OnCommand) // TODO: use COMMAND_HANDLER_EX instead
 	END_MSG_MAP()
 
 	DECLARE_WND_CLASS_EX(TEXT("{25821DB8-4BFE-42E8-9D1C-DB284C367102}"), CS_VREDRAW | CS_HREDRAW, (-1));
 
-	sync_room_window(ui_element_config::ptr config, ui_element_instance_callback_ptr p_callback) : m_callback(p_callback), m_config(config) {}
+	sync_room_window(ui_element_config::ptr config, ui_element_instance_callback_ptr p_callback) : m_callback(p_callback), m_config(config), m_manager(sync_manager::get_instance()) {
+		m_manager.register_update_window_callback(std::bind(&sync_room_window::update_sync_room_list, this));
+	}
 
 	void initialize_window(HWND parent) {
-		WIN32_OP(Create(parent, 0, 0, 0, 0) != NULL);
+		WIN32_OP(Create(parent, 0, 0, 0) != NULL);
 		// WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU
 	}
 
@@ -53,6 +61,27 @@ public:
 		}
 	}
 
+	BOOL PreTranslateMessage(MSG *msg) override {
+		return IsDialogMessage(msg);
+	}
+
+	void OnCommand(UINT wParamHi, UINT wParamLo, HWND hWnd) {
+		if (wParamHi == BN_CLICKED) {
+			switch (wParamLo) {
+			case CREATE_ROOM_BUTTON:
+				console::print("Clicked CREATE ROOM");
+				m_create_room_diag.DoModal();
+				break;
+			case JOIN_ROOM_BUTTON:
+				console::print("Clicked JOIN ROOM");
+				break;
+			case SETTINGS_ROOM_BUTTON:
+				console::print("Clicked SETTINGS");
+				break;
+			}
+		}
+	}
+
 	BOOL OnEraseBkgnd(CDCHandle dc) {
 		CRect rc; WIN32_OP_D(GetClientRect(&rc));
 		CBrush brush;
@@ -73,14 +102,12 @@ public:
 	LRESULT OnCreate(LPCREATESTRUCT param) {
 		t_ui_font font = m_callback->query_font_ex(ui_font_default);
 
-		m_sync_room_listbox.Create(*this, CRect(0, 0, 380, 250), 0, WS_CHILD | WS_VISIBLE | WS_VSCROLL);
-		m_sync_room_listbox.AddString(TEXT("1"));
-		m_sync_room_listbox.AddString(TEXT("2"));
-		m_sync_room_listbox.AddString(TEXT("3"));
+		m_sync_room_listbox.Create(*this, CRect(0, 0, 380, 250), 0, WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_GROUP);
+		update_sync_room_list();
 
-		m_create_room_button.Create(*this, CRect(0, 270, 120, 300), TEXT("Create room..."), WS_CHILD | WS_VISIBLE, 0, CREATE_ROOM_BUTTON);
-		m_join_room_button.Create(*this, CRect(130, 270, 250, 300), TEXT("Join room"), WS_CHILD | WS_VISIBLE, 0, JOIN_ROOM_BUTTON);
-		m_settings_room_button.Create(*this, CRect(260, 270, 380, 300), TEXT("Settings..."), WS_CHILD | WS_VISIBLE, 0, SETTINGS_ROOM_BUTTON);
+		m_create_room_button.Create(*this, CRect(0, 270, 120, 300), TEXT("Create room..."), WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_GROUP, 0, CREATE_ROOM_BUTTON);
+		m_join_room_button.Create(*this, CRect(130, 270, 250, 300), TEXT("Join room"), WS_CHILD | WS_VISIBLE | WS_TABSTOP, 0, JOIN_ROOM_BUTTON);
+		m_settings_room_button.Create(*this, CRect(260, 270, 380, 300), TEXT("Settings..."), WS_CHILD | WS_VISIBLE | WS_TABSTOP, 0, SETTINGS_ROOM_BUTTON);
 
 		SetFont(font);
 
@@ -91,13 +118,32 @@ public:
 
 		return 0;
 	}
+
+	void update_sync_room_list() {
+		auto sr_list = m_manager.get_sync_room_list();
+
+		m_sync_room_listbox.ResetContent();
+		for (auto & r : sr_list) {
+			std::string item;
+			if (m_manager.sync_room_is_joined(r)) {
+				item = r + " (joined)";
+			}
+			else {
+				item = r;
+			}
+			m_sync_room_listbox.AddString(stringToWstring(item).c_str());
+		}
+	}
 private:
 	ui_element_config::ptr m_config;
+	
+	sync_manager & m_manager;
 	
 	CListBox m_sync_room_listbox;
 	CButton m_create_room_button;
 	CButton m_join_room_button;
 	CButton m_settings_room_button;
+	CCreateRoomDiag m_create_room_diag;
 
 	enum {CREATE_ROOM_BUTTON = 7, JOIN_ROOM_BUTTON, SETTINGS_ROOM_BUTTON};
 protected:
