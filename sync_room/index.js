@@ -27,6 +27,7 @@ io.on('connection', function(socket) {
 		io.emit('room_added', name); // Broadcast to all
 		// The one who created the room joins it automatically
 		socket.join(name);
+		socket.last_joined = name;
 		console.log('Room "' + name + '" created');
 		console.log('User ' + socket.id + ' joined "' + name + '"');
 	});
