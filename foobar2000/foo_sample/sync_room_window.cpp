@@ -28,13 +28,18 @@ public:
 		MSG_WM_ERASEBKGND(OnEraseBkgnd)
 		MSG_WM_PAINT(OnPaint)
 		MSG_WM_CREATE(OnCreate)
-		MSG_WM_COMMAND(OnCommand) // TODO: use COMMAND_HANDLER_EX instead
+		//MSG_WM_COMMAND(OnCommand) // TODO: use COMMAND_HANDLER_EX instead
+		COMMAND_CODE_HANDLER(BN_CLICKED, OnButtonClick)
+		COMMAND_HANDLER_EX(ID_CREATE_ROOM_BUTTON, BN_CLICKED, OnCreateRoom)
+		COMMAND_HANDLER_EX(ID_JOIN_ROOM_BUTTON, BN_CLICKED, OnJoinRoom)
+		COMMAND_HANDLER_EX(ID_SETTINGS_BUTTON, BN_CLICKED, OnSettings)
 	END_MSG_MAP()
 
 	DECLARE_WND_CLASS_EX(TEXT("{25821DB8-4BFE-42E8-9D1C-DB284C367102}"), CS_VREDRAW | CS_HREDRAW, (-1));
 
 	sync_room_window(ui_element_config::ptr config, ui_element_instance_callback_ptr p_callback) : m_callback(p_callback), m_config(config), m_manager(sync_manager::get_instance()) {
 		m_manager.register_update_window_callback(std::bind(&sync_room_window::update_sync_room_list, this));
+		last_clicked = nullptr;
 	}
 
 	void initialize_window(HWND parent) {
@@ -66,27 +71,33 @@ public:
 		return IsDialogMessage(msg);
 	}
 
-	void OnCommand(UINT wParamHi, UINT wParamLo, HWND hWnd) {
-		if (wParamHi == BN_CLICKED) {
-			switch (wParamLo) {
-			case CREATE_ROOM_BUTTON:
-				console::print("Clicked CREATE ROOM");
-				m_create_room_diag.DoModal();
-				break;
-			case JOIN_ROOM_BUTTON: {
-				console::print("Clicked JOIN ROOM");
-				int idx = m_sync_room_listbox.GetCurSel();
-				auto & room_name = m_sync_room_name_table[idx];
-				m_manager.join_sync_room(room_name);
-				update_sync_room_list();
-			}
-					
-				break;
-			case SETTINGS_ROOM_BUTTON:
-				console::print("Clicked SETTINGS");
-				break;
-			}
+	void OnCreateRoom(UINT, int, CWindow) {
+		console::print("Clicked CREATE ROOM");
+		last_clicked = &m_create_room_button;
+		m_create_room_diag.DoModal();
+	}
+
+	void OnJoinRoom(UINT, int, CWindow) {
+		console::print("Clicked JOIN ROOM");
+		last_clicked = &m_join_room_button;
+		int idx = m_sync_room_listbox.GetCurSel();
+		if (idx == LB_ERR) return;
+		auto & room_name = m_sync_room_name_table[idx];
+		m_manager.join_sync_room(room_name);
+		update_sync_room_list();
+	}
+
+	void OnSettings(UINT, int, CWindow) {
+		last_clicked = &m_settings_button;
+	}
+
+	LRESULT OnButtonClick(UINT, int, CWindow, BOOL & bHandled) {
+		if (last_clicked) {
+			last_clicked->SetButtonStyle(BS_PUSHBUTTON, 1);
+			last_clicked->SetState(0);
 		}
+		bHandled = false;
+		return 0;
 	}
 
 	BOOL OnEraseBkgnd(CDCHandle dc) {
@@ -112,16 +123,16 @@ public:
 		m_sync_room_listbox.Create(*this, CRect(0, 0, 380, 250), 0, WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_GROUP);
 		update_sync_room_list();
 
-		m_create_room_button.Create(*this, CRect(0, 270, 120, 300), TEXT("Create room..."), WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_GROUP, 0, CREATE_ROOM_BUTTON);
-		m_join_room_button.Create(*this, CRect(130, 270, 250, 300), TEXT("Join room"), WS_CHILD | WS_VISIBLE | WS_TABSTOP, 0, JOIN_ROOM_BUTTON);
-		m_settings_room_button.Create(*this, CRect(260, 270, 380, 300), TEXT("Settings..."), WS_CHILD | WS_VISIBLE | WS_TABSTOP, 0, SETTINGS_ROOM_BUTTON);
+		m_create_room_button.Create(*this, CRect(0, 270, 120, 300), TEXT("Create room..."), WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_GROUP, 0, ID_CREATE_ROOM_BUTTON);
+		m_join_room_button.Create(*this, CRect(130, 270, 250, 300), TEXT("Join room"), WS_CHILD | WS_VISIBLE | WS_TABSTOP, 0, ID_JOIN_ROOM_BUTTON);
+		m_settings_button.Create(*this, CRect(260, 270, 380, 300), TEXT("Settings..."), WS_CHILD | WS_VISIBLE | WS_TABSTOP, 0, ID_SETTINGS_BUTTON);
 
 		SetFont(font);
 
 		m_sync_room_listbox.SetFont(font);
 		m_create_room_button.SetFont(font);
 		m_join_room_button.SetFont(font);
-		m_settings_room_button.SetFont(font);
+		m_settings_button.SetFont(font);
 
 		return 0;
 	}
@@ -151,12 +162,13 @@ private:
 	CListBox m_sync_room_listbox;
 	CButton m_create_room_button;
 	CButton m_join_room_button;
-	CButton m_settings_room_button;
+	CButton m_settings_button;
+	CButton * last_clicked;
 	CCreateRoomDiag m_create_room_diag;
 
 	std::unordered_map<int, std::string> m_sync_room_name_table;
 
-	enum {CREATE_ROOM_BUTTON = 7, JOIN_ROOM_BUTTON, SETTINGS_ROOM_BUTTON};
+	enum {ID_CREATE_ROOM_BUTTON = 7, ID_JOIN_ROOM_BUTTON, ID_SETTINGS_BUTTON};
 protected:
 	const ui_element_instance_callback_ptr m_callback;
 };

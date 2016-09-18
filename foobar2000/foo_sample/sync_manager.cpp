@@ -60,9 +60,6 @@ void sync_manager::on_init() {
 
 	update_window_callback = nullptr;
 	setup_sync_room_event_handlers();
-
-	// TEST!
-	create_sync_room("The Room");
 }
 
 void sync_manager::on_quit() {
@@ -272,6 +269,7 @@ void sync_manager::setup_sync_room_event_handlers() {
 
 void sync_manager::create_sync_room(const std::string & name) {
 	auto h = get_sio_client();
+	if (!h) return;
 	auto & socket = h->socket();
 
 	socket->emit("create_room", { name });
@@ -280,6 +278,7 @@ void sync_manager::create_sync_room(const std::string & name) {
 
 void sync_manager::join_sync_room(const std::string & name) {
 	auto h = get_sio_client();
+	if (!h) return;
 	auto & socket = h->socket();
 
 	socket->emit("join_room", { name });
