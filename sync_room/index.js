@@ -17,6 +17,10 @@ io.on('connection', function(socket) {
 	console.log('a user connected');
 	socket.on('disconnect', function() {
 		console.log('user disconnected');
+		// Broadcast updated room list.
+		// Rooms occupied by the disconnected user only are removed.
+		io.emit('room_list', io.sockets.adapter.rooms);
+		console.log(io.sockets.adapter.rooms);
 	});
 
 	socket.on('create_room', function(name) {
@@ -34,8 +38,8 @@ io.on('connection', function(socket) {
 	});
 
 	socket.on('list_rooms', function() {
-		socket.emit('room_list', io.sockets.adapter.rooms)
-		console.log(io.sockets.adapter.rooms)
+		socket.emit('room_list', io.sockets.adapter.rooms);
+		console.log(io.sockets.adapter.rooms);
 	});
 });
 
