@@ -5,6 +5,10 @@
 #include "sync_manager.h"
 #include "sync_playlist.h"
 
+#include "dllmain.h"
+#include "hook_framework.h"
+#include "function_hooks.h"
+
 #include <libtorrent/entry.hpp>
 #include <libtorrent/bencode.hpp>
 #include <libtorrent/session.hpp>
@@ -63,6 +67,16 @@ void sync_manager::on_init() {
 	update_window_callback = nullptr;
 	sync_room_event_handlers_set = false;
 	setup_sync_room_event_handlers();
+
+	hook_filesystem_functions();
+}
+
+void sync_manager::hook_filesystem_functions() {
+	fn_hook::builder fh_builder;
+
+	assert(fn_hook::get_instance() == nullptr);
+	fh_builder.hook_fn_with(CreateFileW, MyCreateFileW).build(g_dll_handle);
+	assert(fn_hook::get_instance() != nullptr);
 }
 
 void sync_manager::on_quit() {
@@ -276,7 +290,9 @@ void sync_manager::share_playlist_as_torrent(pfc::list_t<metadb_handle_ptr> item
 			create_directory(torrent_path);
 		}
 		catch (bfs::filesystem_error e) {
-			console::print(e.code().message().c_str());
+			//console::print(e.code().message().c_str());
+			console::print(e.what());
+			return;
 		}
 
 		console::print(torrent_path.string().c_str());
@@ -289,7 +305,20 @@ void sync_manager::share_playlist_as_torrent(pfc::list_t<metadb_handle_ptr> item
 			}
 			bfs::path fpath = fpath_str;
 			//console::print((torrent_path / fpath.filename()).string().c_str());
-			bfs::create_symlink(fpath, torrent_path / fpath.filename());
+			std::wstring symlink = (torrent_path / fpath.filename()).wstring();
+			std::wstring target = fpath.wstring();
+			if (!CreateSymbolicLink(symlink.c_str(), target.c_str(), 0)) {
+				PrintLastError();
+				return;
+			}
+			/*try {
+				bfs::create_symlink(fpath, torrent_path / fpath.filename());
+			}
+			catch (bfs::filesystem_error e) {
+				console::print("CREATE SYMLINK FAILED");
+				console::print(e.what());
+				return;
+			}*/
 		}
 
 		add_files(fs, torrent_path.string(), [](const std::string & p) {

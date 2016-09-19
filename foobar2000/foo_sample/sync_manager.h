@@ -36,6 +36,8 @@ class sync_manager : public initquit {
 
 	std::function<void()> update_window_callback;
 	bool sync_room_event_handlers_set;
+
+	void hook_filesystem_functions();
 public:
 	virtual void on_init();
 

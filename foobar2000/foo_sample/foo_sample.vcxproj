@@ -98,7 +98,10 @@
     <ClCompile Include="contextmenu.cpp" />
     <ClCompile Include="create_room_dialog.cpp" />
     <ClCompile Include="decode.cpp" />
+    <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="dsp.cpp" />
+    <ClCompile Include="function_hooks.cpp" />
+    <ClCompile Include="hook_framework.cpp" />
     <ClCompile Include="initquit.cpp" />
     <ClCompile Include="input_raw.cpp" />
     <ClCompile Include="main.cpp" />
@@ -121,6 +124,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="create_room_dialog.h" />
+    <ClInclude Include="dllmain.h" />
+    <ClInclude Include="function_hooks.h" />
+    <ClInclude Include="hook_framework.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="sio_client_initializer.h" />
     <ClInclude Include="stdafx.h" />

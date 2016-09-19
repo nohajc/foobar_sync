@@ -91,3 +91,19 @@ std::string MimeTypeFromString(const std::string& str) {
 
 	return "";
 }
+
+void PrintLastError() {
+	DWORD errCode = GetLastError();
+	TCHAR *err;
+	if (!FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
+		NULL,
+		errCode,
+		MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), // default language
+		(LPTSTR)&err,
+		0,
+		NULL))
+		return;
+
+	console::print(wstringToString(err).c_str());
+	LocalFree(err);
+}
