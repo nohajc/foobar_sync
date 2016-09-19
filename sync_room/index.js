@@ -50,6 +50,10 @@ io.on('connection', function(socket) {
 		socket.emit('room_list', io.sockets.adapter.rooms);
 		console.log(io.sockets.adapter.rooms);
 	});
+
+	socket.on('share_torrent', function(room, data) {
+		console.log('Share torrent with ' + room + ': ' + data);
+	});
 });
 
 http.listen(4200, function() {
