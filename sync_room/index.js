@@ -52,7 +52,8 @@ io.on('connection', function(socket) {
 	});
 
 	socket.on('share_torrent', function(room, data) {
-		console.log('Share torrent with ' + room + ': ' + data);
+		socket.broadcast.to(room).emit('add_torrent', data);
+		console.log('Share torrent with ' + room);
 	});
 });
 
