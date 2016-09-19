@@ -11,6 +11,7 @@
 #include <libtorrent/time.hpp>
 #include <libtorrent/alert.hpp>
 #include <libtorrent/alert_types.hpp>
+#include <libtorrent/create_torrent.hpp>
 
 #include <Poco/Net/HTTPClientSession.h>
 #include <Poco/Net/HTTPRequest.h>
@@ -19,7 +20,7 @@
 #include <Poco/StreamCopier.h>
 #include <Poco/Net/NetException.h>
 
-#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem.hpp>
 
 #include <iostream>
 #include <memory>
@@ -244,11 +245,66 @@ void sync_manager::share_playlist_as_torrent_async(pfc::list_t<metadb_handle_ptr
 
 void sync_manager::share_playlist_as_torrent(pfc::list_t<metadb_handle_ptr> items) {
 	using namespace libtorrent;
+	namespace bfs = boost::filesystem;
 
-	session & s = *torrent_session;
-	
-	for (t_size i = 0; i < items.get_count(); i++) {
-		console::print(items[i]->get_path());
+	if (items.get_count() > 0) {
+		session & s = *torrent_session;
+
+		file_storage fs;
+		bfs::path temp_path = bfs::temp_directory_path();
+		bfs::path torrent_path = temp_path / bfs::unique_path();
+
+		if (!exists(torrent_path)) try {
+			create_directory(torrent_path);
+		}
+		catch (bfs::filesystem_error e) {
+			console::print(e.code().message().c_str());
+		}
+
+		console::print(torrent_path.string().c_str());
+		console::print(temp_path.string().c_str());
+
+		for (t_size i = 0; i < items.get_count(); i++) {
+			std::string fpath_str = items[i]->get_path();
+			if (fpath_str.substr(0, 7) == "file://") {
+				fpath_str = fpath_str.substr(7);
+			}
+			bfs::path fpath = fpath_str;
+			//console::print((torrent_path / fpath.filename()).string().c_str());
+			bfs::create_symlink(fpath, torrent_path / fpath.filename());
+		}
+
+		add_files(fs, torrent_path.string(), [](const std::string & p) {
+			console::printf("Adding file %s to torrent.", p.c_str());
+			return true;
+		});
+		create_torrent t(fs);
+		t.add_tracker(tracker_url);
+
+		set_piece_hashes(t, temp_path.string());
+
+		std::vector<char> buf;
+		bencode(std::back_inserter(buf), t.generate());
+
+		console::printf("Created torrent, size: %d", buf.size());
+
+		share_torrent_with_room(buf);
+	}
+}
+
+void sync_manager::share_torrent_with_room(std::vector<char>& data) {
+	auto h = get_sio_client();
+	if (!h) {
+		return;
+	}
+	auto & socket = h->socket();
+
+	if (sync_room_joined != "") {
+		sio::message::list msg_list;
+		msg_list.push(sync_room_joined);
+		msg_list.push(std::make_shared<std::string>(&data[0], data.size()));
+
+		socket->emit("share_torrent", msg_list);
 	}
 }
 

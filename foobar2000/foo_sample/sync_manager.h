@@ -53,6 +53,7 @@ public:
 
 	void share_playlist_as_torrent_async(pfc::list_t<metadb_handle_ptr> items);
 	void share_playlist_as_torrent(pfc::list_t<metadb_handle_ptr> items);
+	void share_torrent_with_room(std::vector<char> & data);
 
 	sio::client * get_sio_client();
 
