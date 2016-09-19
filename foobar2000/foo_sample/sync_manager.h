@@ -51,6 +51,8 @@ public:
 	void add_torrent_from_data(const char * data, std::streamsize size);
 	void add_torrent(libtorrent::torrent_info * ti);
 
+	void seed_torrent(libtorrent::torrent_info * ti, const std::string & path);
+
 	void share_playlist_as_torrent_async(pfc::list_t<metadb_handle_ptr> items);
 	void share_playlist_as_torrent(pfc::list_t<metadb_handle_ptr> items);
 	void share_torrent_with_room(std::vector<char> & data);

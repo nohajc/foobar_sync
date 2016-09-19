@@ -239,6 +239,24 @@ void sync_manager::add_torrent(libtorrent::torrent_info * ti) {
 	pl[ti->info_hash()] = std::make_unique<sync_playlist>(h);
 }
 
+void sync_manager::seed_torrent(libtorrent::torrent_info * ti, const std::string & path) {
+	using namespace libtorrent;
+	using namespace boost::filesystem;
+
+	add_torrent_params p;
+	error_code ec;
+	session & s = *torrent_session;
+
+	p.ti = ti;
+	p.save_path = path;
+
+	torrent_handle h = s.add_torrent(p, ec);
+	if (ec) {
+		console::printf("Error adding torrent to session: %s", ec.message().c_str());
+		return;
+	}
+}
+
 void sync_manager::share_playlist_as_torrent_async(pfc::list_t<metadb_handle_ptr> items) {
 	void_async(&sync_manager::share_playlist_as_torrent, this, items);
 }
@@ -248,7 +266,7 @@ void sync_manager::share_playlist_as_torrent(pfc::list_t<metadb_handle_ptr> item
 	namespace bfs = boost::filesystem;
 
 	if (items.get_count() > 0) {
-		session & s = *torrent_session;
+		//session & s = *torrent_session;
 
 		file_storage fs;
 		bfs::path temp_path = bfs::temp_directory_path();
@@ -288,6 +306,19 @@ void sync_manager::share_playlist_as_torrent(pfc::list_t<metadb_handle_ptr> item
 
 		console::printf("Created torrent, size: %d", buf.size());
 
+		error_code ec;
+		torrent_info * ti = new torrent_info(&buf[0], buf.size(), ec);
+
+		if (ec)
+		{
+			console::printf("Error loading torrent: %s\n", ec.message().c_str());
+			return;
+		}
+		else {
+			console::print("Torrent file appears to be valid.");
+		}
+
+		seed_torrent(ti, temp_path.string());
 		share_torrent_with_room(buf);
 	}
 }
@@ -329,19 +360,13 @@ void sync_manager::setup_sync_room_event_handlers() {
 	}
 	auto & socket = h->socket();
 
-	/*socket->on("room_added", [this](sio::event & e) {
+	socket->on("add_torrent", [this](sio::event & e) {
 		auto & msg = e.get_message();
-		assert(msg->flag_string);
-		console::print(msg->get_string().c_str());
-
-		{
-			std::lock_guard<std::mutex> guard(sync_room_list_mutex);
-			sync_room_list.insert(msg->get_string());
-		}
-		if (update_window_callback) {
-			update_window_callback();
-		}
-	});*/
+		assert(msg->flag_binary);
+		auto & data_ptr = msg->get_binary();
+		auto data = &(*data_ptr)[0];
+		add_torrent_from_data(data, data_ptr->size());
+	});
 
 	socket->on("room_list", [this](sio::event & e) {
 		auto & msg = e.get_message();
