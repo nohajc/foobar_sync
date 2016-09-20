@@ -343,7 +343,10 @@ void sync_manager::share_playlist_as_torrent(pfc::list_t<metadb_handle_ptr> item
 			console::printf("Adding file %s to torrent.", p.c_str());
 			return true;
 		});
-		create_torrent t(fs);
+
+		// Make sure the optimize flag is off,
+		// we want to retain the original order of files.
+		create_torrent t(fs, 0, -1, 0);
 		t.add_tracker(tracker_url);
 
 		set_piece_hashes(t, temp_path.string());

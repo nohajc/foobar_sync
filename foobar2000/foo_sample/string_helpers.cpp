@@ -7,20 +7,20 @@
 #include <iomanip>
 #include <vector>
 
-std::string wstringToString(std::wstring string_in) {
-	size_t len = WideCharToMultiByte(CP_UTF8, 0, &string_in[0], string_in.size(), NULL, 0, NULL, NULL);
+std::string wstringToString(std::wstring string_in, UINT cp) {
+	size_t len = WideCharToMultiByte(cp, 0, &string_in[0], string_in.size(), NULL, 0, NULL, NULL);
 
 	std::string string_s(len, 0);
-	WideCharToMultiByte(CP_UTF8, 0, &string_in[0], string_in.size(), &string_s[0], len, NULL, NULL);
+	WideCharToMultiByte(cp, 0, &string_in[0], string_in.size(), &string_s[0], len, NULL, NULL);
 
 	return string_s;
 }
 
-std::wstring stringToWstring(std::string string_in) {
-	size_t len = MultiByteToWideChar(CP_UTF8, 0, &string_in[0], string_in.size(), NULL, 0);
+std::wstring stringToWstring(std::string string_in, UINT cp) {
+	size_t len = MultiByteToWideChar(cp, 0, &string_in[0], string_in.size(), NULL, 0);
 
 	std::wstring wstring_s(len, 0);
-	MultiByteToWideChar(CP_UTF8, 0, &string_in[0], string_in.size(), &wstring_s[0], len);
+	MultiByteToWideChar(cp, 0, &string_in[0], string_in.size(), &wstring_s[0], len);
 
 	return wstring_s;
 }

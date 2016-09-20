@@ -2,6 +2,7 @@
 #include "function_hooks.h"
 #include "hook_framework.h"
 #include "sync_manager.h"
+#include "string_helpers.h"
 
 #include <vector>
 #include <unordered_map>
@@ -25,13 +26,18 @@ HANDLE WINAPI MyCreateFileW(
 	auto CreateFileW_Orig = h->get_orig_fn(MyCreateFileW);
 
 	std::wstring our_filename = filename;
+	//console::printf("MyCreateFileW: %s", wstringToString(filename).c_str());
+
 	if (our_filename.substr(0, 4) == TEXT("\\\\?\\")) {
 		our_filename = our_filename.substr(4);
+		//console::printf("Matches \\\\?\\");
 	}
 
 	auto vp_entry_it = vp.find(our_filename);
 	if (vp_entry_it != vp.end()) {
+		//console::printf("Actually matches!");
 		// Virtual file path, translate it:
+		//console::printf("Actual file: %s", wstringToString(vp_entry_it->second).c_str());
 		return CreateFileW_Orig(vp_entry_it->second.c_str(), access, sharing, sa, creation, attributes, hTemplate);
 	}
 
