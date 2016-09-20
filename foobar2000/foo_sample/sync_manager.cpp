@@ -75,7 +75,12 @@ void sync_manager::hook_filesystem_functions() {
 	fn_hook::builder fh_builder;
 
 	assert(fn_hook::get_instance() == nullptr);
-	fh_builder.hook_fn_with(CreateFileW, MyCreateFileW).build(g_dll_handle);
+	fh_builder
+		.hook_fn_with(CreateFileW, MyCreateFileW)
+		.hook_fn_with(FindFirstFileW, MyFindFirstFileW)
+		.hook_fn_with(FindNextFileW, MyFindNextFileW)
+		.hook_fn_with(FindClose, MyFindClose)
+		.build(g_dll_handle);
 	assert(fn_hook::get_instance() != nullptr);
 }
 
@@ -295,6 +300,12 @@ void sync_manager::share_playlist_as_torrent(pfc::list_t<metadb_handle_ptr> item
 			return;
 		}
 
+		auto torrent_path_wstr = torrent_path.wstring() + TEXT("\\*");
+		auto virt_dir_optional = virtual_dirs.emplace(std::make_pair(torrent_path_wstr, std::vector<std::wstring>()));
+		assert(virt_dir_optional.second);
+		auto virt_dir_it = virt_dir_optional.first;
+		auto & virt_dir_file_list = virt_dir_it->second;
+
 		console::print(torrent_path.string().c_str());
 		console::print(temp_path.string().c_str());
 
@@ -305,12 +316,16 @@ void sync_manager::share_playlist_as_torrent(pfc::list_t<metadb_handle_ptr> item
 			}
 			bfs::path fpath = fpath_str;
 			//console::print((torrent_path / fpath.filename()).string().c_str());
-			std::wstring symlink = (torrent_path / fpath.filename()).wstring();
+			std::wstring virt_path = (torrent_path / fpath.filename()).wstring();
 			std::wstring target = fpath.wstring();
-			if (!CreateSymbolicLink(symlink.c_str(), target.c_str(), 0)) {
+
+			virtual_paths.emplace(std::make_pair(virt_path, target));
+			virt_dir_file_list.push_back(fpath.filename().wstring());
+
+			/*if (!CreateSymbolicLink(symlink.c_str(), target.c_str(), 0)) {
 				PrintLastError();
 				return;
-			}
+			}*/
 			/*try {
 				bfs::create_symlink(fpath, torrent_path / fpath.filename());
 			}
@@ -366,6 +381,14 @@ void sync_manager::share_torrent_with_room(std::vector<char>& data) {
 
 		socket->emit("share_torrent", msg_list);
 	}
+}
+
+decltype(sync_manager::virtual_paths) & sync_manager::get_virtual_paths() {
+	return virtual_paths;
+}
+
+decltype(sync_manager::virtual_dirs) & sync_manager::get_virtual_dirs() {
+	return virtual_dirs;
 }
 
 sio::client * sync_manager::get_sio_client() {

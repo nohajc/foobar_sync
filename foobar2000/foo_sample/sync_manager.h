@@ -38,6 +38,8 @@ class sync_manager : public initquit {
 	bool sync_room_event_handlers_set;
 
 	void hook_filesystem_functions();
+	std::unordered_map<std::wstring, std::wstring> virtual_paths;
+	std::unordered_map<std::wstring, std::vector<std::wstring>> virtual_dirs;
 public:
 	virtual void on_init();
 
@@ -58,6 +60,9 @@ public:
 	void share_playlist_as_torrent_async(pfc::list_t<metadb_handle_ptr> items);
 	void share_playlist_as_torrent(pfc::list_t<metadb_handle_ptr> items);
 	void share_torrent_with_room(std::vector<char> & data);
+
+	decltype(virtual_paths) & get_virtual_paths();
+	decltype(virtual_dirs) & get_virtual_dirs();
 
 	sio::client * get_sio_client();
 
