@@ -75,7 +75,7 @@ decltype(sync_playlist::info) sync_playlist::get_info() {
 	return info;
 }
 
-std::future<sync_playlist::piece_data> sync_playlist::request_piece(int piece_idx, int deadline) {
+std::future<sync_playlist::piece_data> sync_playlist::request_piece(int piece_idx, int deadline, piece_source src) {
 	using namespace libtorrent;
 
 	//auto data_future = read_request[piece_idx].get_shared_future();
@@ -93,6 +93,8 @@ std::future<sync_playlist::piece_data> sync_playlist::request_piece(int piece_id
 	}
 	
 	hnd.set_piece_deadline(piece_idx, deadline, torrent_handle::alert_when_available);
+
+	// TODO: priority request via websocket
 
 	return data_future;
 }
@@ -200,7 +202,7 @@ void sync_playlist::readahead() {
 
 	// Request all the pieces
 
-	for (int i = 0, deadline = 0; i < num_pieces; ++i, deadline += 500) {
+	for (int i = 0, deadline = 0; i < num_pieces; ++i, deadline += 50) {
 		data_future.push_back(request_piece(i, deadline));
 	}
 

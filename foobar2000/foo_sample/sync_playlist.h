@@ -41,7 +41,8 @@ public:
 
 	sync_playlist(const libtorrent::torrent_handle & h);
 
-	std::future<piece_data> sync_playlist::request_piece(int piece_idx, int deadline);
+	enum piece_source {TORRENT_SOURCE, WEBSOCKET_SOURCE};
+	std::future<piece_data> sync_playlist::request_piece(int piece_idx, int deadline, piece_source src = TORRENT_SOURCE);
 	size_t read_file(int file_idx, void * buf, t_filesize offset, t_size length, abort_callback & p_abort);
 
 	typedef std::packaged_task<piece_data(piece_data)> read_piece_task;

@@ -419,11 +419,20 @@ void sync_manager::setup_sync_room_event_handlers() {
 	auto & socket = h->socket();
 
 	socket->on("add_torrent", [this](sio::event & e) {
-		auto & msg = e.get_message();
-		assert(msg->flag_binary);
-		auto & data_ptr = msg->get_binary();
-		auto data = &(*data_ptr)[0];
-		add_torrent_from_data(data, data_ptr->size());
+		auto & msgs = e.get_messages();
+		assert(msgs.size() == 2);
+
+		auto & data_msg = msgs[0];
+		assert(data_msg->flag_binary);
+		auto & data_ptr = data_msg->get_binary();
+		auto data_raw = &(*data_ptr)[0];
+
+		// TODO: We need to receive and store the id of seeder
+		// so that we can later ask him for pieces via websocket.
+		auto & id_msg = msgs[1];
+		assert(id_msg->flag_string);
+
+		add_torrent_from_data(data_raw, data_ptr->size());
 	});
 
 	socket->on("room_list", [this](sio::event & e) {

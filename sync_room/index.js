@@ -52,8 +52,22 @@ io.on('connection', function(socket) {
 	});
 
 	socket.on('share_torrent', function(room, data) {
-		socket.broadcast.to(room).emit('add_torrent', data);
-		console.log('Share torrent with ' + room);
+		// Broadcast torrent and seeder id
+		socket.broadcast.to(room).emit('add_torrent', data, socket.id);
+		console.log(socket.id + ' shared torrent with ' + room);
+	});
+
+	socket.on('download_piece', function(torrent_id, seeder_id, piece_idx) {
+		// TODO: Get torrent piece from seeder.
+		// We either send 'upload_piece' message to seeder
+		// or send back result cached here on the server.
+		// Caching is going to be temporary:
+		// Each piece can be requested at most n-1 times,
+		// where n is the number of clients sharing a room.
+		// Furthermore we can assume that if one client needs
+		// a particular piece, the others are going to ask
+		// for it at the same time (since they should be in sync)
+		// unless they have already gotten the piece via torrent.
 	});
 });
 
