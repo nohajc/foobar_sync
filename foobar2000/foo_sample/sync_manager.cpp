@@ -224,38 +224,41 @@ void sync_manager::add_torrent(libtorrent::torrent_info * ti) {
 	using namespace libtorrent;
 	using namespace boost::filesystem;
 
-	add_torrent_params p;
-	error_code ec;
-	session & s = *torrent_session;
+	// Playlist related foobar API does not work outside of the main thread
+	fb2k::inMainThread([this, ti]() {
+		add_torrent_params p;
+		error_code ec;
+		session & s = *torrent_session;
 
-	p.ti = ti;
+		p.ti = ti;
 
-	PWSTR wstr_profile_path;
-	HRESULT hr = SHGetKnownFolderPath(FOLDERID_Profile, 0, NULL, &wstr_profile_path);
-	assert(SUCCEEDED(hr));
+		PWSTR wstr_profile_path;
+		HRESULT hr = SHGetKnownFolderPath(FOLDERID_Profile, 0, NULL, &wstr_profile_path);
+		assert(SUCCEEDED(hr));
 
-	std::string profile_path = wstringToString(wstr_profile_path);
-	CoTaskMemFree(wstr_profile_path);
+		std::string profile_path = wstringToString(wstr_profile_path);
+		CoTaskMemFree(wstr_profile_path);
 
-	path save_path = profile_path / "Foobar torrents";
+		path save_path = profile_path / "Foobar torrents";
 
-	if (!exists(save_path)) try {
-		create_directory(save_path);
-	}
-	catch (filesystem_error e) {
-		console::print(e.code().message().c_str());
-	}
+		if (!exists(save_path)) try {
+			create_directory(save_path);
+		}
+		catch (filesystem_error e) {
+			console::print(e.code().message().c_str());
+		}
 
-	p.save_path = save_path.generic_string();
-	console::print(save_path.generic_string().c_str());
+		p.save_path = save_path.generic_string();
+		console::print(save_path.generic_string().c_str());
 
-	torrent_handle h = s.add_torrent(p, ec);
-	if (ec) {
-		console::printf("Error adding torrent to session: %s", ec.message().c_str());
-		return;
-	}
+		torrent_handle h = s.add_torrent(p, ec);
+		if (ec) {
+			console::printf("Error adding torrent to session: %s", ec.message().c_str());
+			return;
+		}
 
-	pl[ti->info_hash()] = std::make_unique<sync_playlist>(h);
+		pl[ti->info_hash()] = std::make_unique<sync_playlist>(h);
+	});
 }
 
 void sync_manager::seed_torrent(libtorrent::torrent_info * ti, const std::string & path) {

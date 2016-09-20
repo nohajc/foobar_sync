@@ -57,7 +57,7 @@
       <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
-      <AdditionalIncludeDirectories>$(SolutionDir)\..\..\..\boost_1_61_0;$(SolutionDir)\..\..\..\libtorrent-rasterbar-1.0.10\include;$(SolutionDir)\..\..\..\WTL\Include\;$(SolutionDir)\..\..\..\poco-1.7.4\Net\include\;$(SolutionDir)\..\..\..\poco-1.7.4\Foundation\include\</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\..\..\..\socket.io-client-cpp\lib\;$(SolutionDir)\..\..\..\boost_1_61_0;$(SolutionDir)\..\..\..\libtorrent-rasterbar-1.0.10\include;$(SolutionDir)\..\..\..\WTL\Include\;$(SolutionDir)\..\..\..\poco-1.7.4\Net\include\;$(SolutionDir)\..\..\..\poco-1.7.4\Foundation\include\</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
