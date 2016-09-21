@@ -141,7 +141,6 @@ void sync_manager::alert_handler() {
 
 					// Provide the data to an associated future object
 					task(*rpa); // After the value is set, task can be deleted
-								//promise.set_value(*rpa); // After the value is set, promise can be deleted
 					break;
 				}
 				default:;
@@ -257,7 +256,7 @@ void sync_manager::add_torrent(libtorrent::torrent_info * ti) {
 			return;
 		}
 
-		pl[ti->info_hash()] = std::make_unique<sync_playlist>(h);
+		pl[ti->info_hash()] = std::make_unique<sync_playlist>(h, get_sio_client());
 	});
 }
 
@@ -369,11 +368,11 @@ void sync_manager::share_playlist_as_torrent(pfc::list_t<metadb_handle_ptr> item
 		}
 
 		seed_torrent(ti, temp_path.string());
-		share_torrent_with_room(buf);
+		share_torrent_with_room(buf, sha1ToHexString(ti->info_hash().to_string()));
 	}
 }
 
-void sync_manager::share_torrent_with_room(std::vector<char>& data) {
+void sync_manager::share_torrent_with_room(std::vector<char>& data, const std::string & info_hash_str) {
 	auto h = get_sio_client();
 	if (!h) {
 		return;
@@ -383,6 +382,7 @@ void sync_manager::share_torrent_with_room(std::vector<char>& data) {
 	if (sync_room_joined != "") {
 		sio::message::list msg_list;
 		msg_list.push(sync_room_joined);
+		msg_list.push(info_hash_str);
 		msg_list.push(std::make_shared<std::string>(&data[0], data.size()));
 
 		socket->emit("share_torrent", msg_list);
@@ -419,7 +419,7 @@ void sync_manager::setup_sync_room_event_handlers() {
 	auto & socket = h->socket();
 
 	socket->on("add_torrent", [this](sio::event & e) {
-		auto & msgs = e.get_messages();
+		/*auto & msgs = e.get_messages();
 		assert(msgs.size() == 2);
 
 		auto & data_msg = msgs[0];
@@ -431,8 +431,13 @@ void sync_manager::setup_sync_room_event_handlers() {
 		// so that we can later ask him for pieces via websocket.
 		auto & id_msg = msgs[1];
 		assert(id_msg->flag_string);
+		add_torrent_from_data(data_raw, data_ptr->size());*/
 
-		add_torrent_from_data(data_raw, data_ptr->size());
+		auto & msg = e.get_message();
+		assert(msg->flag_binary);
+		auto & data_ptr = msg->get_binary();
+		auto data = &(*data_ptr)[0];
+		add_torrent_from_data(data, data_ptr->size());
 	});
 
 	socket->on("room_list", [this](sio::event & e) {
@@ -460,6 +465,36 @@ void sync_manager::setup_sync_room_event_handlers() {
 		if (update_window_callback) {
 			update_window_callback();
 		}
+	});
+
+	socket->on("piece_downloaded", [this](sio::event & e) {
+		auto & msgs = e.get_messages();
+
+		assert(msgs.size() == 3);
+		assert(msgs[0]->flag_string); // info_hash
+		assert(msgs[1]->flag_string); // piece_idx
+		assert(msgs[2]->flag_binary); // piece_data
+
+		auto info_hash = libtorrent::sha1_hash(hexStringToSha1(msgs[0]->get_string()).c_str());
+		int piece_idx = std::stoi(msgs[1]->get_string());
+		auto piece_data = msgs[2]->get_binary();
+
+		pl[info_hash]->piece_downloaded(piece_idx, piece_data);
+	});
+
+	socket->on("upload_piece", [this](sio::event & e) {
+		auto & msgs = e.get_messages();
+
+		assert(msgs.size() == 3);
+		assert(msgs[0]->flag_string); // info_hash
+		assert(msgs[1]->flag_string); // piece_idx
+		assert(msgs[2]->flag_string); // recipient_id
+
+		auto info_hash = libtorrent::sha1_hash(hexStringToSha1(msgs[0]->get_string()).c_str());
+		int piece_idx = std::stoi(msgs[1]->get_string());
+		const std::string & recipient_id = msgs[2]->get_string();
+
+		pl[info_hash]->upload_piece(piece_idx, recipient_id);
 	});
 
 	sync_room_event_handlers_set = true;

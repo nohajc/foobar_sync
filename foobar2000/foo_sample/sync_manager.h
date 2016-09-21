@@ -59,7 +59,7 @@ public:
 
 	void share_playlist_as_torrent_async(pfc::list_t<metadb_handle_ptr> items);
 	void share_playlist_as_torrent(pfc::list_t<metadb_handle_ptr> items);
-	void share_torrent_with_room(std::vector<char> & data);
+	void share_torrent_with_room(std::vector<char> & data, const std::string & info_hash_str);
 
 	decltype(virtual_paths) & get_virtual_paths();
 	decltype(virtual_dirs) & get_virtual_dirs();

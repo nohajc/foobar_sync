@@ -23,6 +23,9 @@ app.get('/', function(req, res) {
 	res.sendFile(__dirname + '/index.html');
 });
 
+var cached_pieces = {}
+var torrent_seeders = {}
+
 io.on('connection', function(socket) {
 	console.log('a user connected');
 	socket.on('disconnect', function() {
@@ -51,13 +54,17 @@ io.on('connection', function(socket) {
 		console.log(io.sockets.adapter.rooms);
 	});
 
-	socket.on('share_torrent', function(room, data) {
-		// Broadcast torrent and seeder id
-		socket.broadcast.to(room).emit('add_torrent', data, socket.id);
-		console.log(socket.id + ' shared torrent with ' + room);
+	socket.on('share_torrent', function(room, torrent_id, data) {
+		cached_pieces[torrent_id] = [];
+		// Broadcast torrent, associate it with a seeder id
+		socket.broadcast.to(room).emit('add_torrent', data);
+		torrent_seeders[torrent_id] = socket.id;
+
+		console.log(socket.id + ' shared torrent ' + torrent_id + ' with ' + room);
+		console.log(cached_pieces);
 	});
 
-	socket.on('download_piece', function(torrent_id, seeder_id, piece_idx) {
+	socket.on('download_piece', function(torrent_id, piece_idx) {
 		// TODO: Get torrent piece from seeder.
 		// We either send 'upload_piece' message to seeder
 		// or send back result cached here on the server.
@@ -68,6 +75,22 @@ io.on('connection', function(socket) {
 		// a particular piece, the others are going to ask
 		// for it at the same time (since they should be in sync)
 		// unless they have already gotten the piece via torrent.
+		piece_idx = +piece_idx; // Convert to integer
+		var piece = cached_pieces[torrent_id][piece_idx];
+		if (piece != undefined) {
+			socket.emit('piece_downloaded', torrent_id, piece_idx, piece);
+		}
+		else {
+			var seeder_id = torrent_seeders[torrent_id];
+			socket.broadcast.to(seeder_id).emit('upload_piece', torrent_id, piece_idx, socket.id);
+		}
+	});
+
+	socket.on('piece_uploaded', function(torrent_id, piece_idx, piece, recipient_id) {
+		piece_idx = +piece_idx; // Convert to integer
+		// Cache the result and send it to recipient
+		cached_pieces[torrent_id][piece_idx] = piece; // TODO: set timeout to clean the cache record
+		socket.broadcast.to(recipient_id).emit('piece_downloaded', torrent_id, piece_idx, piece);
 	});
 });
 
