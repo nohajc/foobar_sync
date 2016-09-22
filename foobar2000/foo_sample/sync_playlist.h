@@ -56,7 +56,7 @@ public:
 	decltype(hnd) & get_handle();
 	decltype(info) get_info();
 
-	sync_playlist(const libtorrent::torrent_handle & h, sio::client * cl);
+	sync_playlist(const libtorrent::torrent_handle & h, sio::client * cl, bool seed);
 
 	enum piece_source {TORRENT_SOURCE, WEBSOCKET_SOURCE};
 	std::future<piece_data> sync_playlist::request_piece(int piece_idx, int deadline, piece_source src = TORRENT_SOURCE);
@@ -68,6 +68,7 @@ public:
 	std::unordered_multimap<int, read_piece_task> read_request;
 	std::mutex read_request_mutex;
 
+	std::vector<read_piece_task> pop_read_requests(int piece_idx);
 private:
 	std::vector<char> cached_data;
 	std::vector<bool> piece_cached_bitmap;

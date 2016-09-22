@@ -14,58 +14,63 @@
 
 #include <cstring>
 
-sync_playlist::sync_playlist(const libtorrent::torrent_handle & h, sio::client * cl) : hnd(h), info(h.get_torrent_info()), sio_client(*cl) {
+sync_playlist::sync_playlist(const libtorrent::torrent_handle & h, sio::client * cl, bool seed) : hnd(h), info(h.get_torrent_info()), sio_client(*cl) {
 	using namespace libtorrent;
 	using namespace boost::filesystem;
-	console::print("Let's create playlist.");
-
-	int num_files = info.num_files();
-
-	auto mdb = static_api_ptr_t<metadb>();
-	auto pl_manager = static_api_ptr_t<playlist_manager>();
-
-	pfc::list_t<metadb_handle_ptr> mh_list;
 
 	// Get textual representation of the infohash
 	std::string hash_binstr = info.info_hash().to_string();
 	std::string hash_str = sha1ToHexString(hash_binstr);
 	infohash_str = hash_str;
 
-	for (int i = 0; i < num_files; ++i) {
-		const file_entry & e = info.file_at(i);
-		if (e.pad_file) continue;
+	if (!seed) {
+		console::print("Let's create playlist.");
 
-		path fp = e.path;
+		int num_files = info.num_files();
 
-		fp = hash_str / std::to_string(i) / fp;
+		auto mdb = static_api_ptr_t<metadb>();
+		auto pl_manager = static_api_ptr_t<playlist_manager>();
 
-		// Create full path with "sync://" prefix
-		std::string path_with_prefix = sync_fs::prefix + fp.generic_string();
+		pfc::list_t<metadb_handle_ptr> mh_list;
 
-		// Add playable location meta handle to list
-		metadb_handle_ptr mh = mdb->handle_create(path_with_prefix.c_str(), 0);
-		mh_list.add_item(mh);
+		for (int i = 0; i < num_files; ++i) {
+			const file_entry & e = info.file_at(i);
+			if (e.pad_file) continue;
 
-		console::printf("Path: %s", fp.generic_string().c_str());
+			path fp = e.path;
+
+			fp = hash_str / std::to_string(i) / fp;
+
+			// Create full path with "sync://" prefix
+			std::string path_with_prefix = sync_fs::prefix + fp.generic_string();
+
+			// Add playable location meta handle to list
+			metadb_handle_ptr mh = mdb->handle_create(path_with_prefix.c_str(), 0);
+			mh_list.add_item(mh);
+
+			console::printf("Path: %s", fp.generic_string().c_str());
+		}
+
+		pl_manager->activeplaylist_clear();
+		pl_manager->activeplaylist_add_items_filter(mh_list, false);
+
+		// Prepare cache_piece callback object
+		cache_piece_callback = std::bind(&sync_playlist::cache_piece, this, std::placeholders::_1);
+
+		// Allocate memory for cache
+		cached_data.resize(info.total_size());
+		// Init cache bitmap
+		piece_cached_bitmap.resize(info.num_pieces(), false);
+
+		// Start readahead thread
+		readahead_thread = std::thread(&sync_playlist::readahead, this);
 	}
-
-	/*const char pl_name[] = "Torrent playlist";
-	t_size pl_idx = pl_manager->create_playlist(pl_name, sizeof(pl_name), pfc_infinite);
-	pl_manager->playlist_add_items_filter(pl_idx, mh_list, true);
-	pl_manager->set_active_playlist(pl_idx);*/
-	pl_manager->activeplaylist_clear();
-	pl_manager->activeplaylist_add_items_filter(mh_list, false);
-
-	// Prepare cache_piece callback object
-	cache_piece_callback = std::bind(&sync_playlist::cache_piece, this, std::placeholders::_1);
-
-	// Allocate memory for cache
-	cached_data.resize(info.total_size());
-	// Init cache bitmap
-	piece_cached_bitmap.resize(info.num_pieces(), false);
-
-	// Start readahead thread
-	readahead_thread = std::thread(&sync_playlist::readahead, this);
+	else {
+		cache_piece_callback = [](const piece_data & pd) {
+			return pd; // Don't cache anything, we are seeding the torrent.
+			// Piece requests are only for websocket upload.
+		};
+	}
 }
 
 decltype(sync_playlist::hnd) & sync_playlist::get_handle() {
@@ -96,7 +101,7 @@ std::future<sync_playlist::piece_data> sync_playlist::request_piece(int piece_id
 	if (src == TORRENT_SOURCE) {
 		hnd.set_piece_deadline(piece_idx, deadline, torrent_handle::alert_when_available);
 	}
-	else {
+	else { // Priority request via websocket
 		assert(src == WEBSOCKET_SOURCE);
 
 		sio::message::list msg_list;
@@ -104,8 +109,6 @@ std::future<sync_playlist::piece_data> sync_playlist::request_piece(int piece_id
 		msg_list.push(std::to_string(piece_idx));
 		sio_client.socket()->emit("download_piece", msg_list);
 	}
-
-	// TODO: priority request via websocket
 
 	return data_future;
 }
@@ -191,21 +194,13 @@ size_t sync_playlist::read_file(int file_idx, void * buf, t_filesize offset, t_s
 }
 
 void sync_playlist::piece_downloaded(int piece_idx, std::shared_ptr<const std::string> piece_buf) {
-	sync_playlist::read_piece_task task;
+	std::vector<read_piece_task> tasks = pop_read_requests(piece_idx);
 
-	{ // Synchronized access to read_request multimap
-		std::lock_guard<std::mutex> guard(read_request_mutex);
-
-		// Find a request for this torrent piece
-		auto it = read_request.find(piece_idx);
-		assert(it != read_request.end());
-		// Remove promise from the multimap, move it to this local scope
-		task = std::move(it->second);
-		read_request.erase(it);
+	// Provide the data to associated future objects
+	piece_data pd(piece_idx, piece_buf);
+	for (auto & t : tasks) {
+		t(pd);
 	}
-
-	// Provide the data to an associated future object
-	task(piece_data(piece_idx, piece_buf)); // After the value is set, task can be deleted
 }
 
 void sync_playlist::upload_piece(int piece_idx, const std::string & recipient_id) {
@@ -220,6 +215,25 @@ void sync_playlist::upload_piece(int piece_idx, const std::string & recipient_id
 	msg_list.push(recipient_id);
 
 	sio_client.socket()->emit("piece_uploaded", msg_list);
+}
+
+std::vector<sync_playlist::read_piece_task> sync_playlist::pop_read_requests(int piece_idx) {
+	std::vector<read_piece_task> tasks;
+	// Synchronized access to read_request multimap
+	std::lock_guard<std::mutex> guard(read_request_mutex);
+
+	// Find all requests for this torrent piece
+	auto it_pair = read_request.equal_range(piece_idx);
+	auto it_start = it_pair.first;
+	auto it_end = it_pair.second;
+
+	// Remove promises from the multimap, move them to this local scope
+	std::for_each(it_start, it_end, [&tasks](std::pair<const int, read_piece_task> & t) {
+		tasks.push_back(std::move(t.second));
+	});
+	read_request.erase(it_start, it_end);
+
+	return tasks;
 }
 
 sync_playlist::piece_data sync_playlist::cache_piece(const piece_data & pd) {

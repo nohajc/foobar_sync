@@ -126,21 +126,14 @@ void sync_manager::alert_handler() {
 					sha1_hash ih = rpa->handle.get_torrent_info().info_hash();
 					auto & our_pl = pl[ih];
 
-					sync_playlist::read_piece_task task;
+					std::vector<sync_playlist::read_piece_task> tasks = our_pl->pop_read_requests(rpa->piece);
 
-					{ // Synchronized access to read_request multimap
-						std::lock_guard<std::mutex> guard(our_pl->read_request_mutex);
-
-						// Find a request for this torrent piece
-						auto it = our_pl->read_request.find(rpa->piece);
-						assert(it != our_pl->read_request.end());
-						// Remove promise from the multimap, move it to this local scope
-						task = std::move(it->second);
-						our_pl->read_request.erase(it);
+					// Provide the data to associated future objects
+					sync_playlist::piece_data pd(*rpa);
+					for (auto & t : tasks) {
+						t(pd);
 					}
-
-					// Provide the data to an associated future object
-					task(*rpa); // After the value is set, task can be deleted
+					// After the value is set, task can be deleted
 					break;
 				}
 				default:;
@@ -256,7 +249,7 @@ void sync_manager::add_torrent(libtorrent::torrent_info * ti) {
 			return;
 		}
 
-		pl[ti->info_hash()] = std::make_unique<sync_playlist>(h, get_sio_client());
+		pl[ti->info_hash()] = std::make_unique<sync_playlist>(h, get_sio_client(), false);
 	});
 }
 
@@ -276,6 +269,8 @@ void sync_manager::seed_torrent(libtorrent::torrent_info * ti, const std::string
 		console::printf("Error adding torrent to session: %s", ec.message().c_str());
 		return;
 	}
+
+	pl[ti->info_hash()] = std::make_unique<sync_playlist>(h, get_sio_client(), true);
 }
 
 void sync_manager::share_playlist_as_torrent_async(pfc::list_t<metadb_handle_ptr> items) {
@@ -476,7 +471,7 @@ void sync_manager::setup_sync_room_event_handlers() {
 		assert(msgs[2]->flag_binary); // piece_data
 
 		auto info_hash = libtorrent::sha1_hash(hexStringToSha1(msgs[0]->get_string()).c_str());
-		int piece_idx = std::stoi(msgs[1]->get_string());
+		int piece_idx = msgs[1]->get_int();
 		auto piece_data = msgs[2]->get_binary();
 
 		pl[info_hash]->piece_downloaded(piece_idx, piece_data);
@@ -491,7 +486,7 @@ void sync_manager::setup_sync_room_event_handlers() {
 		assert(msgs[2]->flag_string); // recipient_id
 
 		auto info_hash = libtorrent::sha1_hash(hexStringToSha1(msgs[0]->get_string()).c_str());
-		int piece_idx = std::stoi(msgs[1]->get_string());
+		int piece_idx = msgs[1]->get_int();
 		const std::string & recipient_id = msgs[2]->get_string();
 
 		pl[info_hash]->upload_piece(piece_idx, recipient_id);
