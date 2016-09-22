@@ -61,7 +61,6 @@ io.on('connection', function(socket) {
 		torrent_seeders[torrent_id] = socket.id;
 
 		console.log(socket.id + ' shared torrent ' + torrent_id + ' with ' + room);
-		console.log(cached_pieces);
 	});
 
 	socket.on('download_piece', function(torrent_id, piece_idx) {
@@ -77,10 +76,14 @@ io.on('connection', function(socket) {
 		// unless they have already gotten the piece via torrent.
 		piece_idx = +piece_idx; // Convert to integer
 		var piece = cached_pieces[torrent_id][piece_idx];
+		console.log('Piece ' + piece_idx + ' requested');
+
 		if (piece != undefined) {
+			console.log(' -> Sending it back from cache');
 			socket.emit('piece_downloaded', torrent_id, piece_idx, piece);
 		}
 		else {
+			console.log(' -> Request upload from seeder');
 			var seeder_id = torrent_seeders[torrent_id];
 			socket.broadcast.to(seeder_id).emit('upload_piece', torrent_id, piece_idx, socket.id);
 		}
@@ -91,6 +94,7 @@ io.on('connection', function(socket) {
 		// Cache the result and send it to recipient
 		cached_pieces[torrent_id][piece_idx] = piece; // TODO: set timeout to clean the cache record
 		socket.broadcast.to(recipient_id).emit('piece_downloaded', torrent_id, piece_idx, piece);
+		console.log(' -> Piece ' + piece_idx + ' sent to peer.');
 	});
 });
 
