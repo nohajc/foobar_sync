@@ -5,12 +5,6 @@
 		<script src="https://cdn.socket.io/socket.io-1.4.8.js"></script>
 		<script>
 			var socket = io();
-
-			socket.on('room_added', function(name) {
-				console.log("New room name: " + name);
-			});
-
-			socket.emit('create_room', 'The Room');
 		</script>
 	</head>
 	<body>
