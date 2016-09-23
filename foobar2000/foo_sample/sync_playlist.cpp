@@ -163,9 +163,10 @@ size_t sync_playlist::read_file(int file_idx, void * buf, t_filesize offset, t_s
 		auto & f = data_future[i];
 		int bytes_to_read;
 		char * piece_buf;
+		piece_data data;
 
 		if (f.valid()) { // Read from the returned piece_data
-			auto data = f.get();
+			data = f.get();
 			piece_buf = data.buffer.get() + buf_offset;
 			bytes_to_read = data.size - buf_offset;
 			console::print(">>> READING FROM PIECE_DATA");
