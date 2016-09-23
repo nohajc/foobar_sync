@@ -30,16 +30,16 @@ using namespace Net;
 sync_file::sync_file(const char * url) {
 	ref_count = 0;
 	file_offset = 0;
-	
-	// mime_type;
-	
-	auto path_tokens = split(url + sync_fs::prefix_len, '/');
+	std::string ext;
+	time_t mtime;
 
-	console::printf("Opening file %s...", path_tokens.back().c_str());
-	/*for (std::string & t : path_tokens) {
-		console::print(t.c_str());
-	}*/
+	pl = file_stats(url, file_size, file_idx, ext, mtime);
 
+	mime_type = MimeTypeFromString(ext).c_str();
+}
+
+sync_playlist * sync_file::file_stats(const char * path, t_filesize & file_size, int & file_idx, std::string & ext, time_t & mtime) {
+	auto path_tokens = split(path + sync_fs::prefix_len, '/');
 	// Find torrent playlist by infohash
 	auto & pl_map = sync_manager::get_instance().get_playlist_map();
 	libtorrent::sha1_hash infohash(hexStringToSha1(path_tokens[0]));
@@ -47,27 +47,22 @@ sync_file::sync_file(const char * url) {
 	auto it = pl_map.find(infohash);
 	if (it == pl_map.end()) {
 		console::print("HASH NOT FOUND!");
-		return; // TODO: throw exception
+		return nullptr; // TODO: throw exception
 	}
 
-	pl = it->second.get();
+	sync_playlist * pl = it->second.get();
 
 	// Set file index (index of file in the torrent)
 	std::stringstream ss;
 	ss << path_tokens[1];
 	ss >> file_idx;
-	console::printf("File index: %u", file_idx);
 
-	// Set file size
-	auto & ti = pl->get_info();
-	file_size = ti.file_at(file_idx).size;
-	console::printf("File size: %u", file_size);
+	auto & tf = pl->get_info().file_at(file_idx);
+	file_size = tf.size;
+	mtime = tf.mtime;
+	ext = split(path_tokens.back(), '.').back();
 
-	std::string ext = split(path_tokens.back(), '.').back();
-	console::printf("File extension: %s", ext.c_str());
-
-	mime_type = MimeTypeFromString(ext).c_str();
-	console::printf("Mime type: %s", mime_type.c_str());
+	return pl;
 }
 
 int sync_file::service_release() {
@@ -172,7 +167,16 @@ bool sync_fs_impl::relative_path_parse(const char * relative_path, const char * 
 
 void sync_fs_impl::create_directory(const char * path, abort_callback &) {}
 void sync_fs_impl::list_directory(const char * p_path, directory_callback & p_out, abort_callback & p_abort) {}
-void sync_fs_impl::get_stats(const char * p_path, t_filestats & p_stats, bool & p_is_writeable, abort_callback & p_abort) {}
+
+void sync_fs_impl::get_stats(const char * p_path, t_filestats & p_stats, bool & p_is_writeable, abort_callback & p_abort) {
+	int file_idx;
+	std::string ext;
+	time_t mtime;
+
+	sync_file::file_stats(p_path, p_stats.m_size, file_idx, ext, mtime);
+	p_is_writeable = false;
+	p_stats.m_timestamp = mtime;
+}
 
 const GUID sync_fs::class_guid = { 0xaef1a5b2, 0xf4d2, 0x4afa, { 0xaa, 0xf6, 0xf1, 0xec, 0x6f, 0x3a, 0x71, 0xe7b } };
 

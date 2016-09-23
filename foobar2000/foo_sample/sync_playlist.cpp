@@ -53,6 +53,10 @@ sync_playlist::sync_playlist(const libtorrent::torrent_handle & h, sio::client *
 
 		pl_manager->activeplaylist_clear();
 		pl_manager->activeplaylist_add_items_filter(mh_list, false);
+		//pl_manager->activeplaylist_enum_items()
+		for (int i = 0; i < num_files; ++i) {
+			pl_manager->activeplaylist_ensure_visible(i);
+		}
 
 		// Prepare cache_piece callback object
 		cache_piece_callback = std::bind(&sync_playlist::cache_piece, this, std::placeholders::_1);

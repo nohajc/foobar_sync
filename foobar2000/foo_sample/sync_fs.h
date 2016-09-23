@@ -26,6 +26,8 @@ class sync_file : public file_readonly {
 public:
 	sync_file(const char * url);
 
+	static sync_playlist * file_stats(const char * path, t_filesize & file_size, int & file_idx, std::string & ext, time_t & mtime);
+
 	int service_release();
 
 	int service_add_ref();
